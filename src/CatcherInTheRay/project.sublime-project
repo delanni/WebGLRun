@@ -1,0 +1,13 @@
+{
+	"folders":
+	[
+		{
+			"follow_symlinks": true,
+			"path": "D:\\Study\\BME\\Projects\\WebGL\\WebGL"
+		},
+		{
+			"follow_symlinks": true,
+			"path": "scripts"
+		}
+	]
+}
