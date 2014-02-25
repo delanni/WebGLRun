@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>TESTING TERRAIN GEN</title>
+</head>
+<body bgcolor="lightskyblue">
+<canvas id="canvas" width="480" height="640"></canvas>
+
+<script type="text/javascript">
+	this.W = 480;
+	this.H = 640;
+
+	this.c = document.getElementById("canvas");
+	this.ctx = c.getContext("2d");
+
+	ImageData.prototype.setPixel = function(x,y,r,g,b,a){
+		if (typeof a == 'undefined') { a = 255};
+		if (typeof g == 'undefined') { g = b = r};
+
+		if(x>this.width || y>this.height) return false;
+
+		var w =  this.width;
+		var start = (w*(y|0)+(x|0)%w)*4;
+		this.data[start] = r;
+		this.data[start+1] = g;
+		this.data[start+2] = b;
+		this.data[start+3] = a;
+
+		return true;
+	}
+
+	ctx.clear = function(){
+		ctx.save();
+			ctx.fillStyle="white";
+			ctx.fillRect(0,0,window.W,window.H);
+		ctx.restore();
+	}
+
+	ctx.clear();
+
+	ctx.input = function(array /*[[x,y,r,g,b,a],...]*/){
+	
+		var iData = this.getImageData(0,0,window.W,window.H);
+
+		for(var x = 0; x<array.length; x++){
+			if (!iData.setPixel.apply(iData,array[x])) console.log("FAKK");
+		}
+
+		this.putImageData(iData,0,0);
+	}
+
+</script>
+
+<script type="text/javascript">
+	function makePath(ctx,startX, endX){
+		var STEP = 1;
+		var CURVEFACTOR = 10;
+		var steps = (window.H/STEP)|0;
+		var startXY = [startX,window.H];
+		var endXY = [endX,0];
+
+		var dx =(endXY[0]-startXY[0])/steps;
+		var dy =(endXY[1]-startXY[1])/steps;
+
+		var normal = [-dy,dx];
+		var m = Math.sqrt(Math.pow(normal[0],2)+Math.pow(normal[1],2));
+		normal[0]/=m; normal[1]/=m;
+		offset = 100;
+
+		var lpast=0;
+		var ipast = -80000;
+		var points = [];
+		var ctrlPoints = [];
+		ctrlPoints.push(startXY);
+		ctrlPoints.push(startXY);
+		for(var i =0; i<steps; i++){
+			points.push([startXY[0]+dx*i, startXY[1]+dy*i, 0]);
+			if (Math.random()>0.90 && Math.abs(i-ipast)>10 && Math.abs(i-window.H)>10 && Math.abs(i)>10) {
+				ipast=i;
+				var l = Math.random()*offset - offset/2;
+				if (Math.abs(l-lpast)>offset*0.5 && l*lpast<0) l*=-1;
+				lpast = l;
+				var offsetX =  normal[0]*l;
+				var offsetY =  normal[1]*l;
+				var p = [startXY[0]+dx*i +offsetX, startXY[1]+dy*i+offsetY];
+				//ctx.beginPath();
+				//ctx.moveTo(startXY[0]+dx*i, startXY[1]+dy*i);
+				//ctx.lineTo(p[0],p[1]);
+				//ctx.stroke();
+				ctrlPoints.push(p);
+			}
+
+		}
+
+		//ctx.input(points);
+
+		ctrlPoints.push(points[points.length-1]);
+		ctrlPoints.push(points[points.length-1]);
+
+		var cmspline = drawCatmull(ctrlPoints);
+		//var cmspline = makeCatmull(ctrlPoints);
+		//ctx.input(cmspline);
+	}
+
+	var px = [];
+	c.onclick = function(e){
+		px.push([e.x|0,e.y|0]);
+		console.log("CLICK ON " + e.x + " " + e.y);
+		if(px.length>=4) makezigzag(px);
+	}
+
+	c.onmousemove = function(e){
+		ctx.input([[e.x,e.y,0,255,0]]);
+	}
+
+	function drawCatmull(points, xoffset){
+		xoffset = xoffset || 0;
+		for(var i = 0; i < points.length-3; i++){
+			ctx.beginPath();
+			ctx.moveTo(points[i+1][0],points[i+1][1]);
+			for(var j=0; j< 50; j++){
+				var pi = interpolate(points[i],points[i+1],points[i+2],points[i+3],j/50);
+				ctx.lineTo(pi[0] + xoffset ,pi[1]);
+			}
+			ctx.stroke();
+		}
+	}
+
+	function makeCatmull(points){
+		var _points = [];
+		for(var i = 0; i < points.length-3; i++){
+			var diff = Math.abs(points[i+1][1] - points[i+2][1]);
+			for(var j=0; j< diff; j++){
+				var pi = interpolate(points[i],points[i+1],points[i+2],points[i+3],j/diff);
+				_points.push([pi[0], pi[1], 0, 0, 0]);
+			}
+		}
+		return _points;
+	}
+
+	function makezigzag(points){
+		ctx.beginPath();
+		ctx.moveTo(points[0][0],points[0][1]);
+		for(var i = 0; i < points.length; i++){
+			pi = points[i];
+			ctx.lineTo(pi[0],pi[1]);
+		}
+		ctx.stroke();
+
+	}
+
+	function interpolate(P0, P1, P2, P3, u)
+	{
+		var u3 = u * u * u;
+		var u2 = u * u;
+		var f1 = -0.5 * u3 + u2 - 0.5 * u;
+		var f2 =  1.5 * u3 - 2.5 * u2 + 1.0;
+		var f3 = -1.5 * u3 + 2.0 * u2 + 0.5 * u;
+		var f4 =  0.5 * u3 - 0.5 * u2;
+		var x = P0[0] * f1 + P1[0] * f2 + P2[0] * f3 + P3[0] * f4;
+		var y = P0[1] * f1 + P1[1] * f2 + P2[1] * f3 + P3[1] * f4;
+		return [x,y];
+	}
+
+	function fillEveryPixel(ctx){
+		console.log("ping");
+		var points = [];
+		for(var i = 0 ; i < window.W; i++){
+			for(var j = 0 ; j < window.H; j++){
+				points.push([i,j,0]);
+			}
+		}
+		ctx.input(points);
+	}
+
+	function fillCircles(ctx){
+		var points = [];
+		for(var i = 0 ; i < window.W; i++){
+			for(var j = 0 ; j < window.H; j++){
+				if((Math.sqrt(i*i+j*j)|0)%7==1 )points.push([i,j,0]);
+			}
+		}
+		ctx.input(points);
+	}
+
+	function convolve(imageData,matrix){
+
+	}
+
+	//http://www.phpied.com/files/canvas/matrix.html
+
+	function convolve(ctx, matrix, divisor, offset) {
+	  var m = [].concat(matrix[0], matrix[1], matrix[2]); // flatten
+	  if (!divisor) {
+	    divisor = m.reduce(function(a, b) {return a + b;}) || 1; // sum
+	  }
+	  var olddata = ctx.getImageData(0,0,window.W, window.H);
+	  var oldpx = olddata.data;
+	  var newdata = ctx.createImageData(olddata);
+	  var newpx = newdata.data
+	  var len = newpx.length;
+	  var res = 0;
+	  var w = olddata.width;
+	  for (var i = 0; i < len; i++) {
+	    if ((i + 1) % 4 === 0) {
+	      newpx[i] = oldpx[i];
+	      continue;
+	    }
+	    res = 0;
+	    var these = [
+	      oldpx[i - w * 4 - 4] || oldpx[i],
+	      oldpx[i - w * 4]     || oldpx[i],
+	      oldpx[i - w * 4 + 4] || oldpx[i],
+	      oldpx[i - 4]         || oldpx[i],
+	      oldpx[i],
+	      oldpx[i + 4]         || oldpx[i],
+	      oldpx[i + w * 4 - 4] || oldpx[i],
+	      oldpx[i + w * 4]     || oldpx[i],
+	      oldpx[i + w * 4 + 4] || oldpx[i]
+	    ];
+	    for (var j = 0; j < 9; j++) {
+	      res += these[j] * m[j];
+	    }
+	    res /= divisor;
+	    if (offset) {
+	      res += offset;
+	    }
+	    newpx[i] = res;
+	  }
+	  newdata.data = newpx;
+	  ctx.putImageData(newdata,0,0);
+	};
+
+
+</script>
+</body>
+</html>

@@ -510,7 +510,7 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 21.0,
-						"translation.y": -0.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 2,
@@ -607,7 +607,7 @@
 							"syntax": "Packages/T3S/Typescript.tmLanguage",
 							"translate_tabs_to_spaces": false
 						},
-						"translation.x": -0.0,
+						"translation.x": 0.0,
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
