@@ -15,7 +15,7 @@ var PN_GENERATOR =
       pixels[i+1] = ( inParameters.random.Random() * 256 ) | 0;
       pixels[i+2] = ( inParameters.random.Random() * 256 ) | 0;*/
 
-      pixels[i] = pixels[i+1] =pixels[i+2] =  ( inParameters.random.Random() * 256 ) | 0;
+      pixels[i] = pixels[i+1] =pixels[i+2] =  (inParameters.random.Random() * 256 ) | 0;
 
       /*pixels[i] = pixels[i+1] = pixels[i+2] = ( inParameters.random.Random() * 256 ) | 0;*/
       pixels[i+3] = 255;

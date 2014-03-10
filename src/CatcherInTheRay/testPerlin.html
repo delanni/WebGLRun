@@ -82,7 +82,7 @@ var TERRAINGEN =
 		return canvas;
 	},
 	
-	Get: function ( inParameters )
+	Generate: function ( inParameters )
 	{
 		inParameters = inParameters || {};
 
@@ -91,16 +91,12 @@ var TERRAINGEN =
 		inParameters.depth = inParameters.depth || 10;
 		inParameters.width = inParameters.width || 100;
 		inParameters.height = inParameters.height || 100;
-		inParameters.widthSegments = inParameters.widthSegments || 100;
-		inParameters.heightSegments = inParameters.heightSegments || 100;
 		inParameters.postgen = inParameters.postgen || [];
 		inParameters.effect = inParameters.effect || [];
 		inParameters.filter = inParameters.filter || [];
 		
 		if( typeof inParameters.canvas == 'undefined' )
 			inParameters.canvas = this.CreateCanvas( inParameters.width, inParameters.height );
-		inParameters.canvas.width = inParameters.widthSegments;
-		inParameters.canvas.height = inParameters.heightSegments;
 		
 		var noise = inParameters.generator.Generate(inParameters);
 		
