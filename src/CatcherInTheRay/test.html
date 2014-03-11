@@ -110,9 +110,19 @@
 		ctrlPoints.push(points[points.length-1]);
 		ctrlPoints.push(points[points.length-1]);
 
-		var cmspline = drawCatmull(ctrlPoints);
-		//var cmspline = makeCatmull(ctrlPoints);
-		//ctx.input(cmspline);
+		//var cmspline = drawCatmull(ctrlPoints);
+		var cmspline = makeCatmull(ctrlPoints);
+		drawPath(cmspline);
+	}
+
+	var drawPath = function(points){
+		ctx.moveTo(points[0][0],points[0][1]);
+		ctx.beginPath();
+
+		for(var j=0;j<points.length;j++)
+			ctx.lineTo(points[j][0],points[j][1]);
+			
+		ctx.stroke();
 	}
 
 	c.onclick = function(e){
@@ -391,121 +401,6 @@
 		ctx.putImageData(imgData,0,0);
 	}
 
-
-	//http://freespace.virgin.net/hugo.elias/models/m_perlin.htm
-
-	function noise(x,y){
-		return Math.random()*Math.random()*Math.random()*Math.sin(x)*Math.cos(x);
-    }
-    
-    function smoothNoise(x, y){
-	    var corners = ( noise(x-1, y-1)+noise(x+1, y-1)+noise(x-1, y+1)+noise(x+1, y+1) ) / 16;
-	    var sides   = ( noise(x-1, y)  +noise(x+1, y)  +noise(x, y-1)  +noise(x, y+1) ) /  8;
-	    var center  =  noise(x, y) / 4;
-	    return corners + sides + center
-  	}
-
-  	function interpolatedNoise(x, y){
-
-      var integer_X    = x|0;
-      var fractional_X = x - integer_X;
-
-      var integer_Y    = y|0;
-      var fractional_Y = y - integer_Y;
-
-      var v1 = smoothNoise(integer_X,     integer_Y);
-      var v2 = smoothNoise(integer_X + 1, integer_Y);
-      var v3 = smoothNoise(integer_X,     integer_Y + 1);
-      var v4 = smoothNoise(integer_X + 1, integer_Y + 1);
-
-      var i1 = Interpolate(v1 , v2 , fractional_X);
-      var i2 = Interpolate(v3 , v4 , fractional_X);
-
-      return Interpolate(i1 , i2 , fractional_Y);
-  	}
-
-  	function PerlinNoise_2D(x, y){
-
-      var total = 0;
-      var p = 1/4;
-      var n = 5 - 1;
-
-      for(var i = 0; i < n; i++){
-        frequency = Math.pow(2,i);
-        amplitude = Math.pow(p,i);
-
-        total = total + interpolatedNoise(x * frequency, y * frequency) * amplitude;
-      }
-
-      return total;
-	}
-
-	function Interpolate(a,b,x){
-		// cosine formula
-		var f = (1 - Math.cos(x * 3.1415927)) * 0.5;
-		return  a*(1-f) + b*f;
-	}
-
-	function testPerlin(){
-		var asd = ctx.getImageData(0,0,W,H);
-		for(var ix = 0; ix<W; ix++) for(var iy=0; iy<H; iy++) asd.setPixel(ix,iy,0,0,PerlinNoise_2D(ix,iy)*255,255);
-		ctx.putImageData(asd,0,0);
-	}
-
-	/*
-	 function Noise1(integer x, integer y)
-    n = x + y * 57
-    n = (n<<13) ^ n;
-    return ( 1.0 - ( (n * (n * n * 15731 + 789221) + 1376312589) & 7fffffff) / 1073741824.0);    
-  end function
-
-  function SmoothNoise_1(float x, float y)
-    corners = ( Noise(x-1, y-1)+Noise(x+1, y-1)+Noise(x-1, y+1)+Noise(x+1, y+1) ) / 16
-    sides   = ( Noise(x-1, y)  +Noise(x+1, y)  +Noise(x, y-1)  +Noise(x, y+1) ) /  8
-    center  =  Noise(x, y) / 4
-    return corners + sides + center
-  end function
-
-  function InterpolatedNoise_1(float x, float y)
-
-      integer_X    = int(x)
-      fractional_X = x - integer_X
-
-      integer_Y    = int(y)
-      fractional_Y = y - integer_Y
-
-      v1 = SmoothedNoise1(integer_X,     integer_Y)
-      v2 = SmoothedNoise1(integer_X + 1, integer_Y)
-      v3 = SmoothedNoise1(integer_X,     integer_Y + 1)
-      v4 = SmoothedNoise1(integer_X + 1, integer_Y + 1)
-
-      i1 = Interpolate(v1 , v2 , fractional_X)
-      i2 = Interpolate(v3 , v4 , fractional_X)
-
-      return Interpolate(i1 , i2 , fractional_Y)
-
-  end function
-
-
-  function PerlinNoise_2D(float x, float y)
-
-      total = 0
-      p = persistence
-      n = Number_Of_Octaves - 1
-
-      loop i from 0 to n
-
-          frequency = 2i
-          amplitude = pi
-
-          total = total + InterpolatedNoisei(x * frequency, y * frequency) * amplitude
-
-      end of i loop
-
-      return total
-
-  end function
-  */
 </script>
 </body>
 </html>
