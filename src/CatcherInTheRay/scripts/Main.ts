@@ -1,0 +1,1 @@
+﻿var game = new GAME.GameWorld("mainCanvas", "hard");
