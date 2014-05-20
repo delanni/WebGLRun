@@ -104,10 +104,15 @@ var BLUR = (function () {
     }
 
     function stackBlurCanvasRGBA(id, top_x, top_y, width, height, radius) {
+        var _canvas = document.getElementById(id);
+        return stackBlurCanvasRGBA(_canvas, top_x, top_y, width, height, radius);
+
+    }
+
+    function stackBlurCanvasRGBAFromCanvas(canvas, top_x, top_y, width, height, radius) {
         if (isNaN(radius) || radius < 1) return;
         radius |= 0;
 
-        var canvas = document.getElementById(id);
         var context = canvas.getContext("2d");
         var imageData;
 
@@ -356,36 +361,15 @@ var BLUR = (function () {
 
     }
 
-    function stackBlurCanvasRGBFromCanvas(_canvas, top_x, top_y, width, height, radius) {
-        if (!_canvas.id) {
-            var rnd = "generated" + ((Math.random() * 100000) | 0);
-            if (document.getElementById(rnd)) {
-                stackBlurCanvasRGBFromCanvas(_canvas, top_x, top_y, width, height, radius);
-            }
-            _canvas.id = rnd;
-        }
-        return stackBlurCanvasRGB(_canvas.id, top_x, top_y, width, height, radius);
-
+    function stackBlurCanvasRGB(id, top_x, top_y, width, height, radius) {
+        var _canvas = document.getElementById(id);
+        return stackBlurCanvasRGBFromCanvas(_canvas, top_x, top_y, width, height, radius);
     }
 
-
-    function stackBlurCanvasRGBAFromCanvas(_canvas, top_x, top_y, width, height, radius) {
-        if (!_canvas.id) {
-            var rnd = "generated" + ((Math.random() * 100000) | 0);
-            if (document.getElementById(rnd)) {
-                stackBlurCanvasRGBAFromCanvas(_canvas, top_x, top_y, width, height, radius);
-            }
-            _canvas.id = rnd;
-        }
-        return stackBlurCanvasRGBA(_canvas.id, top_x, top_y, width, height, radius);
-
-    }
-
-    function stackBlurCanvasRGB(canvasId, top_x, top_y, width, height, radius) {
+    function stackBlurCanvasRGBFromCanvas(canvas, top_x, top_y, width, height, radius) {
         if (isNaN(radius) || radius < 1) return;
         radius |= 0;
 
-        var canvas = document.getElementById(canvasId);
         var context = canvas.getContext("2d");
         var imageData;
 

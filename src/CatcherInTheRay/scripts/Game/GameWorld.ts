@@ -1,12 +1,35 @@
-/// <reference path="references.ts" />
-
 module GAME {
     export class GameWorld {
         _engine: BABYLON.Engine;
         _scene: BABYLON.Scene;
         _camera: BABYLON.Camera;
         _canvas: HTMLCanvasElement;
+        _gui: GUI;
         _lights: BABYLON.Light[];
+
+        _scenes: { [name: string]: SCENES.SceneBuilder } = {};
+
+        /// DEFAULTS ARE HERE ///
+        _defaults: GameProperties = {
+            _sceneId: GAME.Scenes.GAME,
+            _gameParameters: {
+                randomSeed: 345,
+                useFlatShading: false
+            },
+            _mapParameters: {
+                destructionLevel: 13,
+                displayCanvas: true,
+                height: 1500,
+                width: 800,
+                minHeight: 0,
+                maxHeight: 300,
+                submesh: 180,
+                param: 1.1,
+                random: new MersenneTwister(12345),
+                pathBottomOffset: 80,
+                pathTopOffset: 720
+            }
+        };
 
         constructor(canvasId: string, fullify?: string) {
             this._canvas = Cast<HTMLCanvasElement>(document.getElementById(canvasId));
@@ -20,9 +43,23 @@ module GAME {
                 this.extendCanvas(FullifyStates.HARD);
             }
 
-            this.loadScene(Scenes.GAME);
+            this._gui = new GUI(this);
+
+            this.buildScenes(this._defaults);
 
             BABYLON.Tools.QueueNewFrame(() => this.renderLoop());
+        }
+
+        applyGuiParams(guiParams: GameProperties) {
+            this.buildScenes(guiParams);
+        }
+
+        buildScenes(parameters: GameProperties) {
+            var testScene = new SCENES.TestScene(this);
+            this._scenes["TEST"] = testScene;
+
+            var gameScene = new SCENES.GameScene(this, parameters._gameParameters, parameters._mapParameters);
+            this._scenes["GAME"] = gameScene;
         }
 
         extendCanvas(fullify: FullifyStates) {
@@ -108,116 +145,23 @@ module GAME {
         }
 
         loadScene(s: Scenes) {
-            var animate: () => void;
-
-            var animate: () => void;
-
-            var buildTestScene = () => {
-                var torusKnot: BABYLON.Mesh;
-
-                this._scene = new BABYLON.Scene(this._engine);
-
-                this._lights = [];
-                this._lights.push(new BABYLON.PointLight("light1", new BABYLON.Vector3(0, 10, 0), this._scene));
-
-                this._camera = new BABYLON.ArcRotateCamera("Camera", 10, 20, 30, new BABYLON.Vector3(0, 0, 0), this._scene);
-                this._camera.attachControl(this._canvas);
-
-                torusKnot = BABYLON.Mesh.CreateTorusKnot("torusknot", 3, 2, 80, 30, 4, 4, this._scene, true);
-                animate = () => {
-                    torusKnot.rotate(BABYLON.Vector3.Up(), 0.01, BABYLON.Space.LOCAL);
-                }
-            }
-
-            var buildGameScene = () => {
-                var draftCanvas = CreateCanvas(800, 1200, true);
-                var pathCanvas = CreateCanvas(800, 1200, true);
-                var secondaryNoiseCanvas = CreateCanvas(400, 600, true);
-
-                var bleedBlurPass1 = new FILTERS.BleedFeed(pathCanvas, 30, 6, true);
-                var bleedBlurPass2 = new FILTERS.BleedFeed(pathCanvas, 8, 3, true);
-                var smallBlurFilter = new FILTERS.StackBlurFilter(12);
-                var darkenPathFilter = new FILTERS.DarknessCopyFilter(pathCanvas);
-
-                this._lights = [];
-                this._lights.push(new BABYLON.PointLight("light1", new BABYLON.Vector3(0, 500, 0), this._scene));
-
-                animate = () => { }
-
-                var mersenne = new MersenneTwister(1212);
-
-                var noiseGen = new PerlinNoiseGenerator({
-                    canvas: draftCanvas,
-                    displayCanvas: true,
-                    height: 1200,
-                    width: 800,
-                    random: mersenne,
-                    param: 1.1
-                });
-
-                var pathGen = new PathGenerator(1515);
-                pathGen.MakePath(pathCanvas, 80, pathCanvas.width - 80);
-                bleedBlurPass1.Apply(pathCanvas);
-                bleedBlurPass2.Apply(pathCanvas);
-                //smallBlurFilter.Apply(pathCanvas);
-
-
-                secondaryNoiseCanvas.getContext("2d").save();
-                for (var i = 0; i < 5; i++) {
-                    pathGen.MakePath(
-                        secondaryNoiseCanvas,
-                        (mersenne.Random() * secondaryNoiseCanvas.width) | 0,
-                        (mersenne.Random() * secondaryNoiseCanvas.width) | 0,
-                        i == 0
-                        );
-                    secondaryNoiseCanvas.getContext("2d").translate(secondaryNoiseCanvas.width / 2, secondaryNoiseCanvas.height / 2);
-                    secondaryNoiseCanvas.getContext("2d").rotate(Math.random() * 180);
-                    secondaryNoiseCanvas.getContext("2d").translate(-secondaryNoiseCanvas.width / 2, -secondaryNoiseCanvas.height / 2);
-                }
-                secondaryNoiseCanvas.getContext("2d").restore();
-                bleedBlurPass1.Apply(secondaryNoiseCanvas);
-                smallBlurFilter.Apply(secondaryNoiseCanvas);
-
-                var randomStridesFilter = new FILTERS.DarknessCopyFilter(FILTERS.Upscale(secondaryNoiseCanvas, 800,1200));
-
-                var terrainGen = new TerrainGenerator({
-                    canvas: draftCanvas,
-                    generator: noiseGen,
-                    height: 1200,
-                    width: 800,
-                    minHeight: 0,
-                    maxHeight: 400,
-                    submesh: 100,
-                    displayCanvas: true,
-                    filter: [randomStridesFilter, darkenPathFilter, smallBlurFilter]
-                });
-
-                var noise = terrainGen.Generate();
-
-                var terrainMesh = terrainGen.NoiseToBabylonMesh(noise, this._scene);
-
-                var groundMaterial = new BABYLON.StandardMaterial("groundMaterial", this._scene);
-                terrainMesh.material = groundMaterial;
-
-                groundMaterial.ambientColor = BABYLON.Color3.FromInts(3, 35, 8);
-                groundMaterial.diffuseColor = BABYLON.Color3.FromInts(0, 200, 39);
-                groundMaterial.specularPower = 0;
-                groundMaterial.specularColor = BABYLON.Color3.FromInts(0, 0, 0);
+            var debugItems = document.getElementsByClassName("DEBUG");
+            for (var i = 0; debugItems.length>0;) {
+                debugItems[i].parentNode.removeChild(debugItems[i]);
             }
 
             switch (s) {
                 case Scenes.TEST:
-                    buildTestScene();
+                    this._scene = this._scenes["TEST"].BuildScene();
                     break;
                 case Scenes.GAME:
-                    buildGameScene();
+                    this._scene = this._scenes["GAME"].BuildScene();
                     break;
             }
 
-            this._scene.beforeRender = () => {
-                animate();
+            this._scene.registerBeforeRender(() => {
                 this.gameLoop();
-            };
+            });
         }
     }
 

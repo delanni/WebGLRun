@@ -8,14 +8,17 @@
 </head>
 
 <body>
+    <!-- A canvas for the engine, this will be resized if needed -->
     <div class="mainwrapper">
         <canvas id="mainCanvas" width="600" height="800"></canvas>
     </div>
-    <script type="text/javascript" src="scripts/cannon.js"></script>
-    <script type="text/javascript" src="scripts/babylon.1.11.js"></script>
-    <script type="text/javascript" src="scripts/StackBlur.js"></script>
-    <!--<script type="text/javascript" src="scripts/gamefx.js"></script>-->
+    <!-- Include all the third party stuff -->
+    <script type="text/javascript" src="scripts/Lib/dat.gui.js"></script>
+    <script type="text/javascript" src="scripts/Lib/cannon.js"></script>
+    <script type="text/javascript" src="scripts/Lib/babylon.1.11.js"></script>
+    <script type="text/javascript" src="scripts/Lib/StackBlur.js"></script>
 
-    <script type="text/javascript" src="scripts/compiled/compiled.js"></script>
+    <!-- And finally the compilation result of my .TS files-->
+    <script type="text/javascript" src="scripts/Lib/compiled.js"></script>
 </body>
 </html>

@@ -1,4 +1,5 @@
 ﻿module FILTERS {
+
     /**
     * This filter overwrites the target canvas' area with the parameter's data.
     **/
@@ -56,6 +57,32 @@
         }
     }
 
+    export class InverseAdditiveCopyFilter implements ICanvasFilter {
+        _paramCanvas: HTMLCanvasElement;
+
+        constructor(paramCanvas: HTMLCanvasElement) {
+            this._paramCanvas = paramCanvas;
+        }
+
+        Check(canvas: HTMLCanvasElement): boolean {
+            return true;
+        }
+
+        Apply(canvas: HTMLCanvasElement): HTMLCanvasElement {
+            var paramCtx = this._paramCanvas.getContext("2d");
+            var paramPixels = paramCtx.getImageData(0, 0, this._paramCanvas.width, this._paramCanvas.height).data;
+
+            var targetCtx = canvas.getContext("2d");
+            var targetImgData = targetCtx.getImageData(0, 0, canvas.width, canvas.height);
+
+            for (var ix = 0; ix < paramPixels.length; ix++) {
+                targetImgData.data[ix] = Math.min((targetImgData.data[ix] + (255-paramPixels[ix])), 255) | 0;
+            }
+            targetCtx.putImageData(targetImgData, 0, 0);
+
+            return canvas;
+        }
+    }
     /**
     * This filter copies the param data byte to byte and substracts it from the target (except for the alpha value);
     **/
@@ -124,7 +151,7 @@
         _blurriness: number;
         _iterations: number;
 
-        constructor(paramCanvas: HTMLCanvasElement, blurRadius: number, iterations:number, darkfeed: boolean = false) {
+        constructor(paramCanvas: HTMLCanvasElement, blurRadius: number, iterations: number, darkfeed: boolean = false) {
             this._paramCanvas = paramCanvas;
             this._isDarkFeed = darkfeed;
             this._blurriness = blurRadius;

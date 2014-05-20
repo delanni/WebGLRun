@@ -16,12 +16,28 @@
     <IISExpressUseClassicPipelineMode />
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="assets\Skybox\skyrender0001 - Copy.png" />
+    <Content Include="assets\Skybox\skyrender0001.png" />
+    <Content Include="assets\Skybox\skyrender0002 - Copy.png" />
+    <Content Include="assets\Skybox\skyrender0002.png" />
+    <Content Include="assets\Skybox\skyrender0003 - Copy.png" />
+    <Content Include="assets\Skybox\skyrender0003.png" />
+    <Content Include="assets\Skybox\skyrender0004 - Copy.png" />
+    <Content Include="assets\Skybox\skyrender0004.png" />
+    <Content Include="assets\Skybox\skyrender0005 - Copy.png" />
+    <Content Include="assets\Skybox\skyrender0005.png" />
+    <Content Include="assets\Skybox\skyrender0006 - Copy.png" />
+    <Content Include="assets\Skybox\skyrender0006.png" />
     <Content Include="css\main.css" />
     <Content Include="index.html" />
-    <Content Include="scripts\babylon.1.11.js" />
+    <Content Include="scripts\Lib\babylon.1.11.js" />
     <Content Include="scripts\compiled\compiled.js" />
-    <Content Include="scripts\StackBlur.js" />
-    <Content Include="web.config" />
+    <Content Include="scripts\Lib\cannon.js" />
+    <Content Include="scripts\Lib\dat.gui.js" />
+    <Content Include="scripts\Lib\StackBlur.js" />
+    <Content Include="web.config">
+      <SubType>Designer</SubType>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <None Include="web.Debug.config">
@@ -33,8 +49,8 @@
   </ItemGroup>
   <ItemGroup>
     <TypeScriptCompile Include="scripts\BabylonExtensions.ts" />
-    <TypeScriptCompile Include="scripts\BlurFilter.ts" />
-    <TypeScriptCompile Include="scripts\CompositeFilter.ts" />
+    <TypeScriptCompile Include="scripts\Filters\BlurFilter.ts" />
+    <TypeScriptCompile Include="scripts\Filters\CompositeFilters.ts" />
     <TypeScriptCompile Include="scripts\declarations\babylon\Actions\babylon.action.d.ts" />
     <TypeScriptCompile Include="scripts\declarations\babylon\Actions\babylon.actionManager.d.ts" />
     <TypeScriptCompile Include="scripts\declarations\babylon\Actions\babylon.condition.d.ts" />
@@ -118,15 +134,24 @@
     <TypeScriptCompile Include="scripts\declarations\babylon\Tools\babylon.tools.dds.d.ts" />
     <TypeScriptCompile Include="scripts\declarations\babylon\Tools\babylon.virtualJoystick.d.ts" />
     <TypeScriptCompile Include="scripts\declarations\StackBlur.d.ts" />
-    <TypeScriptCompile Include="scripts\GameWorld.ts" />
-    <TypeScriptCompile Include="scripts\ICanvasFilter.ts" />
+    <TypeScriptCompile Include="scripts\Filters\FILTERS.ts" />
+    <TypeScriptCompile Include="scripts\Game\GAME.ts" />
+    <TypeScriptCompile Include="scripts\Game\Scenes\GameScene.ts" />
+    <TypeScriptCompile Include="scripts\Game\GameWorld.ts" />
+    <TypeScriptCompile Include="scripts\Gui.ts" />
+    <TypeScriptCompile Include="scripts\Filters\HistogramEqFilter.ts" />
+    <TypeScriptCompile Include="scripts\Filters\ICanvasFilter.ts" />
+    <TypeScriptCompile Include="scripts\Game\Scenes\SceneBuilder.ts" />
     <TypeScriptCompile Include="scripts\Main.ts" />
-    <TypeScriptCompile Include="scripts\TerrainGenerator.ts" />
+    <TypeScriptCompile Include="scripts\Terrain\LandscapeGenerator.ts" />
     <TypeScriptCompile Include="scripts\HTMLTools.ts" />
     <TypeScriptCompile Include="scripts\MersenneTwister.ts" />
-    <TypeScriptCompile Include="scripts\PathGenerator.ts" />
-    <TypeScriptCompile Include="scripts\PerlinNoiseGenerator.ts" />
+    <TypeScriptCompile Include="scripts\Terrain\PathGenerator.ts" />
+    <TypeScriptCompile Include="scripts\Terrain\PerlinNoiseGenerator.ts" />
     <TypeScriptCompile Include="scripts\references.ts" />
+    <TypeScriptCompile Include="scripts\Terrain\TERRAIN.ts" />
+    <TypeScriptCompile Include="scripts\Terrain\TerrainGenerator.ts" />
+    <TypeScriptCompile Include="scripts\Game\Scenes\TestScene.ts" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="scripts\declarations\babylon\Cameras\Controllers\" />
@@ -166,7 +191,8 @@
     <TypeScriptSourceMap>False</TypeScriptSourceMap>
     <TypeScriptModuleKind>amd</TypeScriptModuleKind>
     <TypeScriptGeneratesDeclarations>True</TypeScriptGeneratesDeclarations>
-    <TypeScriptOutFile>scripts\compiled\compiled.js</TypeScriptOutFile>
+    <TypeScriptOutFile>scripts\Lib\compiled.js</TypeScriptOutFile>
+    <IncludeIisSettings>true</IncludeIisSettings>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <TypeScriptTarget>ES3</TypeScriptTarget>

@@ -365,6 +365,10 @@ var FILTERS;
     })();
     FILTERS.HistogramEqFilter = HistogramEqFilter;
 })(FILTERS || (FILTERS = {}));
+/// <reference path="BlurFilter.ts" />
+/// <reference path="CompositeFilters.ts" />
+/// <reference path="HistogramEqFilter.ts" />
+/// <reference path="ICanvasFilter.ts" />
 var GAME;
 (function (GAME) {
     (function (SCENES) {
@@ -433,28 +437,81 @@ var GAME;
         var GameScene = (function (_super) {
             __extends(GameScene, _super);
             function GameScene(gameWorld, parameters, mapParameters) {
-                this.randomSeed = parameters.randomSeed;
-                this.debug = parameters.debug || true;
+                this._randomSeed = parameters.randomSeed;
+                this._debug = parameters.debug || true;
+                this._useFlatShading = parameters.useFlatShading;
                 this._mapParams = mapParameters;
+                if (this._useFlatShading) {
+                    this._mapParams.submesh = Math.min(this._mapParams.submesh, 100);
+                }
                 _super.call(this, gameWorld);
             }
             GameScene.prototype.BuildSceneAround = function (scene) {
-                var light = new BABYLON.PointLight("light1", new BABYLON.Vector3(0, 500, 0), scene);
+                // Adding light
+                this._gameWorld._lights = [];
+                var light = new BABYLON.PointLight("sun", new BABYLON.Vector3(-1359, 260, -3040), scene);
+                light.intensity = 3;
+                light.diffuse.g = 0.7;
+                light.diffuse.b = 0.7;
+
+                var antiLight = new BABYLON.PointLight("antiSun", new BABYLON.Vector3(1359, 260, 3040), scene);
+                antiLight.intensity = .5;
+                antiLight.diffuse.g = 0.7;
+                antiLight.diffuse.b = 0.7;
+                this._gameWorld._lights.push(antiLight);
+
+                this._gameWorld._lights.push(light);
+
+                // Camera
                 var camera = new BABYLON.FreeCamera("Camera", new BABYLON.Vector3(0, 250, 0), scene);
+                camera.ellipsoid = new BABYLON.Vector3(8, 10, 8);
+                camera.checkCollisions = true;
+                if (this._gameWorld._camera)
+                    this._gameWorld._camera.dispose();
+                this._gameWorld._camera = camera;
                 camera.attachControl(this._gameWorld._canvas);
+                camera.maxZ = 10000;
                 camera.speed = 8;
 
-                var mersenne = new MersenneTwister(this.randomSeed);
+                // Skybox
+                var skybox = BABYLON.Mesh.CreateBox("skyBox", 5000.0, scene);
+                skybox.rotation.y = 1.2;
+                var skyboxMaterial = new BABYLON.StandardMaterial("skyBox", scene);
+                skyboxMaterial.backFaceCulling = false;
+                skybox.material = skyboxMaterial;
+                skyboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
+                skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+                skyboxMaterial.reflectionTexture = Cast(new BABYLON.CubeTexture("../assets/Skybox/skyrender", scene, ["0006.png", "0002.png", "0001.png", "0003.png", "0005.png", "0004.png"]));
+                skyboxMaterial.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
+                skybox.checkCollisions = false;
 
-                var landscapeGenerator = new LandscapeGenerator(this._mapParams);
+                // Landscape generation
+                var landscapeGenerator = new TERRAIN.LandscapeGenerator(this._mapParams);
 
                 var terrainMesh = landscapeGenerator.GenerateOn(scene);
+                if (this._useFlatShading) {
+                    terrainMesh.convertToFlatShadedMesh();
+                    var convertedVertices = terrainMesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+                    console.log("Vertices after conversion: " + convertedVertices.length);
+                }
 
                 var groundMaterial = new BABYLON.StandardMaterial("groundMaterial", scene);
                 terrainMesh.material = groundMaterial;
-
                 groundMaterial.specularPower = 0;
                 groundMaterial.specularColor = BABYLON.Color3.FromInts(0, 0, 0);
+                terrainMesh.checkCollisions = true;
+
+                // Put start and end
+                var startOrb = BABYLON.Mesh.CreateSphere("startOrb", 30, 30, scene, true);
+                startOrb.material = new BABYLON.StandardMaterial("startOrbMat", scene);
+                Cast(startOrb.material).emissiveColor = new BABYLON.Color3(0.3, 1.0, 0.2);
+                var endOrb = BABYLON.Mesh.CreateSphere("endOrb", 30, 30, scene, true);
+                endOrb.material = new BABYLON.StandardMaterial("endOrbMat", scene);
+                Cast(endOrb.material).emissiveColor = new BABYLON.Color3(1.0, 0.2, 0.3);
+
+                startOrb.position = new BABYLON.Vector3(this._mapParams.pathTopOffset - this._mapParams.width / 2, 20, this._mapParams.height / 2 - 10);
+                endOrb.position = new BABYLON.Vector3(this._mapParams.pathBottomOffset - this._mapParams.width / 2, 20, this._mapParams.height / -2 + 10);
+
                 return scene;
             };
             return GameScene;
@@ -473,7 +530,8 @@ var GAME;
             this._defaults = {
                 _sceneId: 2 /* GAME */,
                 _gameParameters: {
-                    randomSeed: 345
+                    randomSeed: 345,
+                    useFlatShading: false
                 },
                 _mapParameters: {
                     destructionLevel: 13,
@@ -484,7 +542,9 @@ var GAME;
                     maxHeight: 300,
                     submesh: 180,
                     param: 1.1,
-                    random: new MersenneTwister(12345)
+                    random: new MersenneTwister(12345),
+                    pathBottomOffset: 80,
+                    pathTopOffset: 720
                 }
             };
             this._canvas = Cast(document.getElementById(canvasId));
@@ -675,26 +735,31 @@ var GUI = (function () {
         sceneFolder.open();
 
         var gameFolder = this._gui.addFolder("Game Map");
+        var flatShadingCtr = gameFolder.add(this.properties._gameParameters, "useFlatShading").name("Use flat shading");
         gameFolder.open();
 
         var terrainGenFolder = this._gui.addFolder("Terrain and landscape");
-        terrainGenFolder.add(this.properties._mapParameters, "width").name("Map width").min(160).max(2000).step(10);
-
-        //.onChange(x=> this.properties._mapParameters.width = x);
+        var widthCtr = terrainGenFolder.add(this.properties._mapParameters, "width").name("Map width").min(160).max(2000).step(10);
         terrainGenFolder.add(this.properties._mapParameters, "height").name("Map height").min(160).max(6000).step(10);
-
-        //.onChange(x=> this.properties._mapParameters.height = x);
         terrainGenFolder.add(this.properties._mapParameters, "destructionLevel").name("Destruction level").min(0).max(20).step(1);
-
-        //.onChange(x=> this.properties._mapParameters.destructionLevel = x);
         terrainGenFolder.add(this.properties._mapParameters, "displayCanvas").name("Display debug canvases");
-
-        //.onChange(x=> this.properties._mapParameters.displayCanvas = x);
+        var pathTopCtr = terrainGenFolder.add(this.properties._mapParameters, "pathTopOffset").name("Path top offset").min(0).step(1).max(widthCtr.getValue());
+        var pathBottomCtr = terrainGenFolder.add(this.properties._mapParameters, "pathBottomOffset").name("Path bottom offset").min(0).step(1).max(widthCtr.getValue());
         terrainGenFolder.add(this.properties._mapParameters, "minHeight").name("Minimum height of the map").min(0).max(100).step(5);
         terrainGenFolder.add(this.properties._mapParameters, "maxHeight").name("Maximum height of the map").min(100).max(500).step(5);
-        terrainGenFolder.add(this.properties._mapParameters, "submesh").name("Number of submeshes").min(1).max(500).step(1);
-        terrainGenFolder.add(this.properties._mapParameters, "param").name("Perlin-Noise parameter").min(1.0).max(3.0).step(0.1);
 
+        var submeshCtr = terrainGenFolder.add(this.properties._mapParameters, "submesh").name("Number of submeshes").min(1).max(300).step(1);
+        flatShadingCtr.onChange(function (x) {
+            submeshCtr.max(x ? 100 : 300);
+            submeshCtr.setValue(Math.min(_this.properties._mapParameters.submesh, 100));
+        });
+
+        widthCtr.onChange(function (x) {
+            pathBottomCtr.setValue(Math.min(x, pathBottomCtr.getValue())).max(x);
+            pathTopCtr.setValue(Math.min(x, pathTopCtr.getValue())).max(x);
+        });
+
+        terrainGenFolder.add(this.properties._mapParameters, "param").name("Perlin-Noise parameter").min(1.0).max(3.0).step(0.1);
         terrainGenFolder.open();
 
         this._gui.add(this, "Reload").name("<b>RELOAD</b>");
@@ -743,7 +808,6 @@ function Trace(message) {
         this.TRACES[message] = message;
     }
 }
-var game = new GAME.GameWorld("mainCanvas", "hard");
 // CREDITS to Jérémy Bouny : https://github.com/jbouny/terrain-generator/blob/master/randoms/mersenne-twister.js
 // CREDITS to Makoto Matsumoto and Takuji Nishimura and Sean McCullough http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html
 
@@ -878,15 +942,6 @@ var MersenneTwister = (function () {
     };
     return MersenneTwister;
 })();
-/// <reference path="HTMLTools.ts" />
-/// <reference path="MersenneTwister.ts" />
-/// <reference path="PerlinNoiseGenerator.ts" />
-/// <reference path="TerrainGenerator.ts" />
-/// <reference path="LandscapeGenerator.ts" />
-/// <reference path="BabylonExtensions.ts" />
-/// <reference path="PathGenerator.ts" />
-/// <reference path="Gui.ts" />
-/// <reference path="TestScene.ts" />
 // CREDITS TO Jérémy Bouny : https://github.com/jbouny/terrain-generator/blob/master/terraingen.js
 // Modified by Alex
 var TERRAIN;
@@ -998,7 +1053,7 @@ var TERRAIN;
                 var pathCanvas = CreateCanvas(_this.Parameters.width, _this.Parameters.height, _this.Parameters.displayCanvas);
                 var pathGen = new TERRAIN.PathGenerator(random);
 
-                pathGen.MakePath(pathCanvas, 80, _this.Parameters.width - 80);
+                pathGen.MakePath(pathCanvas, _this.Parameters.pathBottomOffset, _this.Parameters.pathTopOffset);
 
                 tg.DraftCanvases["pathCanvas"] = pathCanvas;
 
@@ -1094,6 +1149,71 @@ var TERRAIN;
         return LandscapeGenerator;
     })();
     TERRAIN.LandscapeGenerator = LandscapeGenerator;
+})(TERRAIN || (TERRAIN = {}));
+// CREDITS TO Jérémy Bouny : https://github.com/jbouny/terrain-generator/blob/master/terraingen.js
+// Modified by Alex
+var TERRAIN;
+(function (TERRAIN) {
+    var TerrainGenerator = (function () {
+        function TerrainGenerator(params) {
+            // Manage default parameters
+            this.Parameters = params || {};
+            this.Parameters.depth = this.Parameters.depth || 10;
+            this.Parameters.width = this.Parameters.width || 100;
+            this.Parameters.height = this.Parameters.height || 100;
+            this.Parameters.steps = this.Parameters.steps || [];
+
+            this.Steps = this.Parameters.steps;
+            this.DraftCanvases = {};
+            this._stepCounter = 0;
+        }
+        TerrainGenerator.prototype.Generate = function () {
+            if (typeof this.Canvas == 'undefined')
+                this.Canvas = CreateCanvas(this.Parameters.width, this.Parameters.height, this.Parameters.displayCanvas);
+            this.Parameters.width = this.Canvas.width;
+            this.Parameters.height = this.Canvas.height;
+
+            while (this.Steps.length > 0) {
+                var actualStep = this.Steps.shift();
+                var result = actualStep.Execute(this);
+                if (!result) {
+                    this.Steps.unshift(actualStep);
+                }
+            }
+
+            return this.Canvas;
+        };
+
+        TerrainGenerator.prototype.AddStep = function (step, tag) {
+            tag = tag || "Step " + this._stepCounter;
+            this._stepCounter += 1;
+            this.Steps.push(new TerrainGeneratorStep(step, tag));
+        };
+
+        TerrainGenerator.prototype.NoiseToBabylonMesh = function (noise, scene) {
+            var terrainMesh = BABYLON.Mesh.CreateGroundFromHeightMapOfCanvas(name, noise, this.Parameters.width, this.Parameters.height, this.Parameters.submesh, this.Parameters.minHeight, this.Parameters.maxHeight, scene, false);
+            return terrainMesh;
+        };
+        return TerrainGenerator;
+    })();
+    TERRAIN.TerrainGenerator = TerrainGenerator;
+
+    var TerrainGeneratorStep = (function () {
+        function TerrainGeneratorStep(func, tag) {
+            this._func = func;
+            this._tag = tag;
+        }
+        TerrainGeneratorStep.prototype.Execute = function (executeOn) {
+            console.time(JSON.stringify(this._tag));
+            console.log("Starting step:", this._tag);
+            var result = this._func(executeOn);
+            console.timeEnd(JSON.stringify(this._tag));
+            console.log("Finished: ", this._tag, ".");
+            return result;
+        };
+        return TerrainGeneratorStep;
+    })();
+    TERRAIN.TerrainGeneratorStep = TerrainGeneratorStep;
 })(TERRAIN || (TERRAIN = {}));
 var TERRAIN;
 (function (TERRAIN) {
@@ -1310,72 +1430,16 @@ var TERRAIN;
     })();
     TERRAIN.PerlinNoiseGenerator = PerlinNoiseGenerator;
 })(TERRAIN || (TERRAIN = {}));
-// CREDITS TO Jérémy Bouny : https://github.com/jbouny/terrain-generator/blob/master/terraingen.js
-// Modified by Alex
-var TERRAIN;
-(function (TERRAIN) {
-    var TerrainGenerator = (function () {
-        function TerrainGenerator(params) {
-            // Manage default parameters
-            this.Parameters = params || {};
-            this.Parameters.depth = this.Parameters.depth || 10;
-            this.Parameters.width = this.Parameters.width || 100;
-            this.Parameters.height = this.Parameters.height || 100;
-            this.Parameters.steps = this.Parameters.steps || [];
-
-            this.Steps = this.Parameters.steps;
-            this.DraftCanvases = {};
-            this._stepCounter = 0;
-        }
-        TerrainGenerator.prototype.Generate = function () {
-            if (typeof this.Canvas == 'undefined')
-                this.Canvas = CreateCanvas(this.Parameters.width, this.Parameters.height, this.Parameters.displayCanvas);
-            this.Parameters.width = this.Canvas.width;
-            this.Parameters.height = this.Canvas.height;
-
-            while (this.Steps.length > 0) {
-                var actualStep = this.Steps.shift();
-                var result = actualStep.Execute(this);
-                if (!result) {
-                    this.Steps.unshift(actualStep);
-                }
-            }
-
-            return this.Canvas;
-        };
-
-        TerrainGenerator.prototype.AddStep = function (step, tag) {
-            tag = tag || "Step " + this._stepCounter;
-            this._stepCounter += 1;
-            this.Steps.push(new TerrainGeneratorStep(step, tag));
-        };
-
-        TerrainGenerator.prototype.NoiseToBabylonMesh = function (noise, scene) {
-            var terrainMesh = BABYLON.Mesh.CreateGroundFromHeightMapOfCanvas(name, noise, this.Parameters.width, this.Parameters.height, this.Parameters.submesh, this.Parameters.minHeight, this.Parameters.maxHeight, scene, false);
-            return terrainMesh;
-        };
-        return TerrainGenerator;
-    })();
-    TERRAIN.TerrainGenerator = TerrainGenerator;
-
-    var TerrainGeneratorStep = (function () {
-        function TerrainGeneratorStep(func, tag) {
-            this._func = func;
-            this._tag = tag;
-        }
-        TerrainGeneratorStep.prototype.Execute = function (executeOn) {
-            console.time(JSON.stringify(this._tag));
-            console.log("Starting step:", this._tag);
-            var result = this._func(executeOn);
-            console.timeEnd(JSON.stringify(this._tag));
-            console.log("Finished: ", this._tag, ".");
-            return result;
-        };
-        return TerrainGeneratorStep;
-    })();
-    TERRAIN.TerrainGeneratorStep = TerrainGeneratorStep;
-})(TERRAIN || (TERRAIN = {}));
 /// <reference path="LandscapeGenerator.ts" />
 /// <reference path="TerrainGenerator.ts" />
 /// <reference path="PathGenerator.ts" />
 /// <reference path="PerlinNoiseGenerator.ts" />
+/// <reference path="HTMLTools.ts" />
+/// <reference path="MersenneTwister.ts" />
+/// <reference path="BabylonExtensions.ts" />
+/// <reference path="Gui.ts" />
+/// <reference path="Game/GAME.ts" />
+/// <reference path="Terrain/TERRAIN.ts" />
+/// <reference path="Filters/FILTERS.ts" />
+/// <reference path="references.ts" />
+var game = new GAME.GameWorld("mainCanvas", "hard");
