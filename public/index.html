@@ -1,18 +1,24 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
-    
-    <head>
-     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-        <link rel="stylesheet" href="css/main.css" type="text/css" />
-    </head>
-    
-    <body>
-    	<div class="mainwrapper">
-    		<canvas id="mainCanvas"></canvas>
-    	</div>
-    </body>
-    <script type="text/javascript" src="scripts/cannon.js"></script>
-    <script type="text/javascript" src="scripts/babylon.js"></script>
-    <script type="text/javascript" src="scripts/gamefx.js"></script>
-    <script type="text/javascript" src="scripts/compiled/app.js"></script>
+
+<head>
+    <title>PEONHQ - WebGL Runner</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link rel="stylesheet" href="css/main.css" type="text/css" />
+</head>
+
+<body>
+    <!-- A canvas for the engine, this will be resized if needed -->
+    <div class="mainwrapper">
+        <canvas id="mainCanvas" width="600" height="800"></canvas>
+    </div>
+    <!-- Include all the third party stuff -->
+    <script type="text/javascript" src="scripts/Lib/dat.gui.js"></script>
+    <script type="text/javascript" src="scripts/Lib/cannon.js"></script>
+    <script type="text/javascript" src="scripts/Lib/babylon.1.11.js"></script>
+    <script type="text/javascript" src="scripts/Lib/StackBlur.js"></script>
+
+    <!-- And finally the compilation result of my .TS files-->
+    <script type="text/javascript" src="scripts/Lib/compiled.js"></script>
+</body>
 </html>

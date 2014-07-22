@@ -216,4 +216,7 @@ pip-log.txt
 
 #OWN
 node_modules/
+
+node_modules/**/
+node_modules/*/
 public/
