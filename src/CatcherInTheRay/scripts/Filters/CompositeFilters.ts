@@ -15,13 +15,13 @@
         }
 
         Apply(canvas: HTMLCanvasElement): HTMLCanvasElement {
-            var paramCtx = this._paramCanvas.getContext("2d");
-            var paramImgData = paramCtx.getImageData(0, 0, this._paramCanvas.width, this._paramCanvas.height);
+            //var paramCtx = this._paramCanvas.getContext("2d");
+            //var paramImgData = paramCtx.getImageData(0, 0, this._paramCanvas.width, this._paramCanvas.height);
 
             var targetCtx = canvas.getContext("2d");
             //var targetImgData = targetCtx.getImageData(0, 0, canvas.width, canvas.height);
 
-            targetCtx.putImageData(paramImgData, 0, 0);
+            targetCtx.drawImage(this._paramCanvas, 0, 0, canvas.width, canvas.height);
 
             return canvas;
         }

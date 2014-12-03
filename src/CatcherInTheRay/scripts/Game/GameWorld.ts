@@ -18,16 +18,18 @@ module GAME {
             },
             _mapParameters: {
                 destructionLevel: 13,
-                displayCanvas: true,
+                displayCanvas: false,
                 height: 1500,
                 width: 800,
                 minHeight: 0,
                 maxHeight: 300,
-                submesh: 180,
+                subdivisions: 180,
                 param: 1.1,
                 random: new MersenneTwister(12345),
                 pathBottomOffset: 80,
-                pathTopOffset: 720
+                pathTopOffset: 720,
+                shrink: 1,
+                eqFactor: 1
             }
         };
 

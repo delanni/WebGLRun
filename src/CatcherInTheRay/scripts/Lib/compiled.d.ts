@@ -74,7 +74,8 @@ declare module FILTERS {
         public _customRect: Rectangle;
         public _from: number;
         public _to: number;
-        constructor(from: number, to: number);
+        public _eqFactor: number;
+        constructor(from: number, to: number, eqFactor?: number);
         public Check(canvas: HTMLCanvasElement): boolean;
         public Apply(canvas: HTMLCanvasElement): HTMLCanvasElement;
     }
@@ -115,8 +116,8 @@ declare module GAME {
             public _randomSeed: number;
             public _debug: boolean;
             public _useFlatShading: boolean;
-            public _mapParams: TERRAIN.LandscapeGeneratorParameters;
-            constructor(gameWorld: GameWorld, parameters: GameParameters, mapParameters: TERRAIN.LandscapeGeneratorParameters);
+            public _mapParams: TERRAIN.HeightMapGeneratorParams;
+            constructor(gameWorld: GameWorld, parameters: GameParameters, mapParameters: TERRAIN.HeightMapGeneratorParams);
             public BuildSceneAround(scene: BABYLON.Scene): BABYLON.Scene;
         }
     }
@@ -161,7 +162,7 @@ declare module dat {
 interface GameProperties {
     _sceneId: GAME.Scenes;
     _gameParameters: GAME.SCENES.GameParameters;
-    _mapParameters: TERRAIN.LandscapeGeneratorParameters;
+    _mapParameters: TERRAIN.HeightMapGeneratorParams;
 }
 declare class GUI {
     private _gameWorld;
@@ -173,10 +174,15 @@ declare class GUI {
     private setDefaults(defaults);
     private initialize();
 }
-declare function CreateCanvas(inWidth: number, inHeight: number, debug?: boolean): HTMLCanvasElement;
+declare function CreateCanvas(inWidth: number, inHeight: number, debug?: boolean, id?: string): HTMLCanvasElement;
 declare function Cast<T>(item: any): T;
 declare function GetDataOfCanvas(index: number): any;
 declare function Trace(message: string): void;
+declare module UTILS {
+    class Utils {
+        static Clamp(scalar: number, min: number, max: number): number;
+    }
+}
 interface RandomProvider {
     Random: () => number;
 }
@@ -200,7 +206,7 @@ declare class MersenneTwister implements RandomProvider {
     private genrand_res53();
 }
 declare module TERRAIN {
-    interface LandscapeGeneratorParameters {
+    interface HeightMapGeneratorParams {
         displayCanvas?: boolean;
         postgen?: any[];
         effect?: any[];
@@ -210,55 +216,42 @@ declare module TERRAIN {
         width?: number;
         height?: number;
         destructionLevel?: number;
-        submesh?: number;
+        subdivisions?: number;
         param?: number;
         random?: RandomProvider;
         pathTopOffset?: number;
         pathBottomOffset?: number;
+        shrink?: number;
+        eqFactor?: number;
     }
-    class LandscapeGenerator {
-        public Parameters: LandscapeGeneratorParameters;
+    class HeightMapGenerator {
+        public Parameters: HeightMapGeneratorParams;
         public Canvas: HTMLCanvasElement;
-        private _maxHeight;
-        private _minHeight;
-        private _gradient;
-        private _gradientBase;
-        constructor(params: LandscapeGeneratorParameters);
-        public getHeightColorFor(height: number): number[];
-        public colorizeMesh(mesh: BABYLON.Mesh): void;
-        public GenerateOn(scene: BABYLON.Scene): BABYLON.Mesh;
+        constructor(params: HeightMapGeneratorParams);
+        public GenerateHeightMap(): HTMLCanvasElement;
     }
 }
 declare module TERRAIN {
-    interface TerrainGeneratorParameters {
-        width?: number;
-        height?: number;
-        displayCanvas?: boolean;
-        type?: number;
-        depth?: number;
-        steps?: TerrainGeneratorStep[];
-        minHeight?: number;
-        maxHeight?: number;
-        submesh?: number;
+    interface TerrainGeneratorParams {
+        width: number;
+        height: number;
+        subdivisions: number;
+        minHeight: number;
+        maxHeight: number;
+        displayCanvas: boolean;
+        colors?: any[];
     }
     class TerrainGenerator {
-        public Parameters: TerrainGeneratorParameters;
-        public Canvas: HTMLCanvasElement;
-        public DraftCanvases: {
-            [canvasName: string]: HTMLCanvasElement;
-        };
-        public Steps: TerrainGeneratorStep[];
-        private _stepCounter;
-        constructor(params: TerrainGeneratorParameters);
-        public Generate(): HTMLCanvasElement;
-        public AddStep(step: (terrainGen: TerrainGenerator) => boolean, tag?: string): void;
-        public NoiseToBabylonMesh(noise: HTMLCanvasElement, scene: BABYLON.Scene): BABYLON.Mesh;
-    }
-    class TerrainGeneratorStep {
-        public _func: (terrainGen: TerrainGenerator) => boolean;
-        public _tag: string;
-        constructor(func: (terrainGen: TerrainGenerator) => boolean, tag: string);
-        public Execute(executeOn: TerrainGenerator): boolean;
+        private _maxHeight;
+        private _minHeight;
+        private _gradientBase;
+        private _gradient;
+        public Parameters: TerrainGeneratorParams;
+        constructor(params: TerrainGeneratorParams);
+        private getHeightColorFor(height);
+        public ColorizeMesh(mesh: BABYLON.Mesh): void;
+        public GenerateWrappingMesh(mesh: BABYLON.Mesh, scene: BABYLON.Scene): BABYLON.Mesh;
+        public ConvertNoiseToBabylonMesh(noise: HTMLCanvasElement, scene: BABYLON.Scene): BABYLON.Mesh;
     }
 }
 declare module TERRAIN {
@@ -269,10 +262,11 @@ declare module TERRAIN {
         * This is the function to generate and draw a path on the canvas
         **/
         public MakePath(canvas: HTMLCanvasElement, from: any, to: any, opaque?: boolean): HTMLCanvasElement;
+        public GeneratePath(canvas: HTMLCanvasElement, from: any, to: any): any[];
         /**
         * This is a generator who generates a path.
         **/
-        public GeneratePath(canvas: HTMLCanvasElement, from: any, to: any): any[];
+        public _GeneratePath(canvas: HTMLCanvasElement, from: any, to: any): any[];
         private interpolate(P0, P1, P2, P3, u);
         private drawCatmull(canvas, points, xoffset);
         private makeCatmull(anchors);
@@ -295,6 +289,37 @@ declare module TERRAIN {
         private randomNoise(separateCanvas, displayCanvas);
         constructor(inParameters: NoiseParameters);
         public Generate(canvas?: HTMLCanvasElement, separateCanvas?: boolean): HTMLCanvasElement;
+    }
+}
+declare module TERRAIN {
+    interface ComplexNoiseGeneratorParameters {
+        width?: number;
+        height?: number;
+        displayCanvas?: boolean;
+        type?: number;
+        depth?: number;
+        steps?: ComplexNoiseGenStep[];
+        minHeight?: number;
+        maxHeight?: number;
+        subdivisions?: number;
+    }
+    class ComplexNoiseGenerator {
+        public Parameters: ComplexNoiseGeneratorParameters;
+        public Canvas: HTMLCanvasElement;
+        public DraftCanvases: {
+            [canvasName: string]: HTMLCanvasElement;
+        };
+        public Steps: ComplexNoiseGenStep[];
+        private _stepCounter;
+        constructor(params: ComplexNoiseGeneratorParameters);
+        public Generate(): HTMLCanvasElement;
+        public AddStep(step: (terrainGen: ComplexNoiseGenerator) => boolean, tag?: string): void;
+    }
+    class ComplexNoiseGenStep {
+        public _func: (terrainGen: ComplexNoiseGenerator) => boolean;
+        public _tag: string;
+        constructor(func: (terrainGen: ComplexNoiseGenerator) => boolean, tag: string);
+        public Execute(executeOn: ComplexNoiseGenerator): boolean;
     }
 }
 declare var game: GAME.GameWorld;

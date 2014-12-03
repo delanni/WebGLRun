@@ -1,5 +1,8 @@
-﻿function CreateCanvas(inWidth: number, inHeight: number, debug: boolean = false): HTMLCanvasElement {
+﻿function CreateCanvas(inWidth: number, inHeight: number, debug: boolean = false, id: string=undefined): HTMLCanvasElement {
     var canvas = document.createElement("canvas");
+    if (id) {
+        canvas.id = id;
+    }
     canvas.classList.add("DEBUG");
     canvas.width = inWidth;
     canvas.height = inHeight;

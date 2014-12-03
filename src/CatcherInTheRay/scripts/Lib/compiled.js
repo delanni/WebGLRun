@@ -3,7 +3,7 @@
     // this extension makes it possibble to generate something to a canvas, then load it as a height map.
     // but Typescript (without hacks) does not allow for further extending classes from the outside, so I need my own hack
     if (typeof BABYLON.Mesh !== 'undefined') {
-        Cast(BABYLON.Mesh).CreateGroundFromHeightMapOfCanvas = function (name, canvas, width, height, subdivisions, minHeight, maxHeight, scene, updatable) {
+        BABYLON.Mesh.CreateGroundFromHeightMapOfCanvas = function (name, canvas, width, height, subdivisions, minHeight, maxHeight, scene, updatable) {
             var groundBase = BABYLON.Mesh.CreateGround(name, width, height, subdivisions, scene, updatable);
 
             var context = canvas.getContext("2d");
@@ -15,68 +15,55 @@
             return groundBase;
         };
     }
-
-    // This was somehow not included in the babylon build I'm currently using, so I had to build it myself from a part of typescript file I found
-    if (typeof BABYLON.VertexData !== 'undefined') {
-        if (!Cast(BABYLON.VertexData).CreateGroundFromHeightMap) {
-            Cast(BABYLON.VertexData).CreateGroundFromHeightMap = function (width, height, subdivisions, minHeight, maxHeight, buffer, bufferWidth, bufferHeight) {
-                var indices = [];
-                var positions = [];
-                var normals = [];
-                var uvs = [];
-                var row, col;
-
-                for (row = 0; row <= subdivisions; row++) {
-                    for (col = 0; col <= subdivisions; col++) {
-                        var position = new BABYLON.Vector3((col * width) / subdivisions - (width / 2.0), 0, ((subdivisions - row) * height) / subdivisions - (height / 2.0));
-
-                        // Compute height
-                        var heightMapX = (((position.x + width / 2) / width) * (bufferWidth - 1)) | 0;
-                        var heightMapY = ((1.0 - (position.z + height / 2) / height) * (bufferHeight - 1)) | 0;
-
-                        var pos = (heightMapX + heightMapY * bufferWidth) * 4;
-                        var r = buffer[pos] / 255.0;
-                        var g = buffer[pos + 1] / 255.0;
-                        var b = buffer[pos + 2] / 255.0;
-
-                        var gradient = r * 0.3 + g * 0.59 + b * 0.11;
-
-                        position.y = minHeight + (maxHeight - minHeight) * gradient;
-
-                        // Add  vertex
-                        positions.push(position.x, position.y, position.z);
-                        normals.push(0, 0, 0);
-                        uvs.push(col / subdivisions, 1.0 - row / subdivisions);
-                    }
-                }
-
-                for (row = 0; row < subdivisions; row++) {
-                    for (col = 0; col < subdivisions; col++) {
-                        indices.push(col + 1 + (row + 1) * (subdivisions + 1));
-                        indices.push(col + 1 + row * (subdivisions + 1));
-                        indices.push(col + row * (subdivisions + 1));
-
-                        indices.push(col + (row + 1) * (subdivisions + 1));
-                        indices.push(col + 1 + (row + 1) * (subdivisions + 1));
-                        indices.push(col + row * (subdivisions + 1));
-                    }
-                }
-
-                // Normals
-                BABYLON.VertexData.ComputeNormals(positions, indices, normals);
-
-                // Result
-                var vertexData = new BABYLON.VertexData();
-
-                vertexData.indices = indices;
-                vertexData.positions = positions;
-                vertexData.normals = normals;
-                vertexData.uvs = uvs;
-
-                return vertexData;
-            };
-        }
-    }
+    //// This was somehow not included in the babylon build I'm currently using, so I had to build it myself from a part of typescript file I found
+    //if (typeof BABYLON.VertexData !== 'undefined') {
+    //    if (!Cast<any>(BABYLON.VertexData).CreateGroundFromHeightMap) {
+    //        Cast<any>(BABYLON.VertexData).CreateGroundFromHeightMap = function (width, height, subdivisions, minHeight, maxHeight, buffer, bufferWidth, bufferHeight) {
+    //            var indices = [];
+    //            var positions = [];
+    //            var normals = [];
+    //            var uvs = [];
+    //            var row, col;
+    //            for (row = 0; row <= subdivisions; row++) {
+    //                for (col = 0; col <= subdivisions; col++) {
+    //                    var position = new BABYLON.Vector3((col * width) / subdivisions - (width / 2.0), 0, ((subdivisions - row) * height) / subdivisions - (height / 2.0));
+    //                    // Compute height
+    //                    var heightMapX = (((position.x + width / 2) / width) * (bufferWidth - 1)) | 0;
+    //                    var heightMapY = ((1.0 - (position.z + height / 2) / height) * (bufferHeight - 1)) | 0;
+    //                    var pos = (heightMapX + heightMapY * bufferWidth) * 4;
+    //                    var r = buffer[pos] / 255.0;
+    //                    var g = buffer[pos + 1] / 255.0;
+    //                    var b = buffer[pos + 2] / 255.0;
+    //                    var gradient = r * 0.3 + g * 0.59 + b * 0.11;
+    //                    position.y = minHeight + (maxHeight - minHeight) * gradient;
+    //                    // Add  vertex
+    //                    positions.push(position.x, position.y, position.z);
+    //                    normals.push(0, 0, 0);
+    //                    uvs.push(col / subdivisions, 1.0 - row / subdivisions);
+    //                }
+    //            }
+    //            for (row = 0; row < subdivisions; row++) {
+    //                for (col = 0; col < subdivisions; col++) {
+    //                    indices.push(col + 1 + (row + 1) * (subdivisions + 1));
+    //                    indices.push(col + 1 + row * (subdivisions + 1));
+    //                    indices.push(col + row * (subdivisions + 1));
+    //                    indices.push(col + (row + 1) * (subdivisions + 1));
+    //                    indices.push(col + 1 + (row + 1) * (subdivisions + 1));
+    //                    indices.push(col + row * (subdivisions + 1));
+    //                }
+    //            }
+    //            // Normals
+    //            BABYLON.VertexData.ComputeNormals(positions, indices, normals);
+    //            // Result
+    //            var vertexData = new BABYLON.VertexData();
+    //            vertexData.indices = indices;
+    //            vertexData.positions = positions;
+    //            vertexData.normals = normals;
+    //            vertexData.uvs = uvs;
+    //            return vertexData;
+    //        };
+    //    }
+    //}
 }
 var FILTERS;
 (function (FILTERS) {
@@ -143,13 +130,12 @@ var FILTERS;
         };
 
         CopyOverwriteFilter.prototype.Apply = function (canvas) {
-            var paramCtx = this._paramCanvas.getContext("2d");
-            var paramImgData = paramCtx.getImageData(0, 0, this._paramCanvas.width, this._paramCanvas.height);
-
+            //var paramCtx = this._paramCanvas.getContext("2d");
+            //var paramImgData = paramCtx.getImageData(0, 0, this._paramCanvas.width, this._paramCanvas.height);
             var targetCtx = canvas.getContext("2d");
 
             //var targetImgData = targetCtx.getImageData(0, 0, canvas.width, canvas.height);
-            targetCtx.putImageData(paramImgData, 0, 0);
+            targetCtx.drawImage(this._paramCanvas, 0, 0, canvas.width, canvas.height);
 
             return canvas;
         };
@@ -317,7 +303,9 @@ var FILTERS;
 var FILTERS;
 (function (FILTERS) {
     var HistogramEqFilter = (function () {
-        function HistogramEqFilter(from, to) {
+        function HistogramEqFilter(from, to, eqFactor) {
+            if (typeof eqFactor === "undefined") { eqFactor = 1; }
+            this._eqFactor = eqFactor;
             this._from = from;
             this._to = to;
         }
@@ -352,7 +340,7 @@ var FILTERS;
                 var b = img.data[i + 2] / 255.0;
                 var gradient = r * 0.3 + g * 0.59 + b * 0.11;
 
-                var normalized = ((gradient - minGradient) / gradientRange) * targetRange + this._from;
+                var normalized = Math.pow((gradient - minGradient) / gradientRange, this._eqFactor) * targetRange + this._from;
                 img.data[i] = (normalized * 255) | 0;
                 img.data[i + 1] = (normalized * 255) | 0;
                 img.data[i + 2] = (normalized * 255) | 0;
@@ -442,7 +430,7 @@ var GAME;
                 this._useFlatShading = parameters.useFlatShading;
                 this._mapParams = mapParameters;
                 if (this._useFlatShading) {
-                    this._mapParams.submesh = Math.min(this._mapParams.submesh, 100);
+                    this._mapParams.subdivisions = Math.min(this._mapParams.subdivisions, 100);
                 }
                 _super.call(this, gameWorld);
             }
@@ -486,21 +474,54 @@ var GAME;
                 skybox.checkCollisions = false;
 
                 // Landscape generation
-                var landscapeGenerator = new TERRAIN.LandscapeGenerator(this._mapParams);
+                var landscapeGenerator = new TERRAIN.HeightMapGenerator(this._mapParams);
+                var noise = landscapeGenerator.GenerateHeightMap();
 
-                var terrainMesh = landscapeGenerator.GenerateOn(scene);
+                // Terrain from the heightmap
+                var terrainGenerator = new TERRAIN.TerrainGenerator({
+                    displayCanvas: this._mapParams.displayCanvas,
+                    height: this._mapParams.height,
+                    width: this._mapParams.width,
+                    maxHeight: this._mapParams.maxHeight,
+                    minHeight: this._mapParams.minHeight,
+                    subdivisions: this._mapParams.subdivisions
+                });
+
+                // Heightmap to mesh
+                Trace("Mesh from height map");
+                var mountainMesh = terrainGenerator.ConvertNoiseToBabylonMesh(noise, scene);
+                mountainMesh.name = "MountainMesh";
+                Trace("Mesh from height map");
+
+                // Generate wrapping mesh to hide sides
+                Trace("Generating sides");
+                var wrappingMesh = terrainGenerator.GenerateWrappingMesh(mountainMesh, scene);
+                Trace("Generating sides");
+
+                // Colors to mesh
+                Trace("Colorize mesh");
+                terrainGenerator.ColorizeMesh(mountainMesh);
+                Trace("Colorize mesh");
+
                 if (this._useFlatShading) {
-                    terrainMesh.convertToFlatShadedMesh();
-                    var convertedVertices = terrainMesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+                    mountainMesh.convertToFlatShadedMesh();
+                    var convertedVertices = mountainMesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
                     console.log("Vertices after conversion: " + convertedVertices.length);
                 }
 
-                var groundMaterial = new BABYLON.StandardMaterial("groundMaterial", scene);
-                terrainMesh.material = groundMaterial;
-                groundMaterial.specularPower = 0;
-                groundMaterial.specularColor = BABYLON.Color3.FromInts(0, 0, 0);
-                terrainMesh.checkCollisions = true;
+                var mountainMaterial = new BABYLON.StandardMaterial("groundMaterial", scene);
+                mountainMesh.material = mountainMaterial;
+                mountainMaterial.specularPower = 0;
+                mountainMaterial.specularColor = BABYLON.Color3.FromInts(0, 0, 0);
+                mountainMesh.checkCollisions = true;
 
+                var mountainSideMaterial = new BABYLON.StandardMaterial("mountainSideMaterial", scene);
+                wrappingMesh.material = mountainSideMaterial;
+                mountainSideMaterial.specularPower = 0;
+                mountainSideMaterial.specularColor = BABYLON.Color3.FromInts(0, 0, 0);
+                mountainSideMaterial.diffuseColor = new BABYLON.Color3(0.43, 0.29, 0.03);
+
+                //mountainSideMaterial.diffuseTexture = new BABYLON.Texture("assets/normalmap.jpg", scene);
                 // Put start and end
                 var startOrb = BABYLON.Mesh.CreateSphere("startOrb", 30, 30, scene, true);
                 startOrb.material = new BABYLON.StandardMaterial("startOrbMat", scene);
@@ -535,16 +556,18 @@ var GAME;
                 },
                 _mapParameters: {
                     destructionLevel: 13,
-                    displayCanvas: true,
+                    displayCanvas: false,
                     height: 1500,
                     width: 800,
                     minHeight: 0,
                     maxHeight: 300,
-                    submesh: 180,
+                    subdivisions: 180,
                     param: 1.1,
                     random: new MersenneTwister(12345),
                     pathBottomOffset: 80,
-                    pathTopOffset: 720
+                    pathTopOffset: 720,
+                    shrink: 1,
+                    eqFactor: 1
                 }
             };
             this._canvas = Cast(document.getElementById(canvasId));
@@ -742,16 +765,18 @@ var GUI = (function () {
         var widthCtr = terrainGenFolder.add(this.properties._mapParameters, "width").name("Map width").min(160).max(2000).step(10);
         terrainGenFolder.add(this.properties._mapParameters, "height").name("Map height").min(160).max(6000).step(10);
         terrainGenFolder.add(this.properties._mapParameters, "destructionLevel").name("Destruction level").min(0).max(20).step(1);
+        terrainGenFolder.add(this.properties._mapParameters, "shrink").name("Shrink").min(0.1).max(16).step(0.1);
+        terrainGenFolder.add(this.properties._mapParameters, "eqFactor").name("Equalizer exponent").min(0.1).max(10).step(0.1);
         terrainGenFolder.add(this.properties._mapParameters, "displayCanvas").name("Display debug canvases");
         var pathTopCtr = terrainGenFolder.add(this.properties._mapParameters, "pathTopOffset").name("Path top offset").min(0).step(1).max(widthCtr.getValue());
         var pathBottomCtr = terrainGenFolder.add(this.properties._mapParameters, "pathBottomOffset").name("Path bottom offset").min(0).step(1).max(widthCtr.getValue());
         terrainGenFolder.add(this.properties._mapParameters, "minHeight").name("Minimum height of the map").min(0).max(100).step(5);
         terrainGenFolder.add(this.properties._mapParameters, "maxHeight").name("Maximum height of the map").min(100).max(500).step(5);
 
-        var submeshCtr = terrainGenFolder.add(this.properties._mapParameters, "submesh").name("Number of submeshes").min(1).max(300).step(1);
+        var subdivCtr = terrainGenFolder.add(this.properties._mapParameters, "subdivisions").name("Number of subdivisions").min(1).max(300).step(1);
         flatShadingCtr.onChange(function (x) {
-            submeshCtr.max(x ? 100 : 300);
-            submeshCtr.setValue(Math.min(_this.properties._mapParameters.submesh, 100));
+            subdivCtr.max(x ? 100 : 300);
+            subdivCtr.setValue(Math.min(_this.properties._mapParameters.subdivisions, 100));
         });
 
         widthCtr.onChange(function (x) {
@@ -762,13 +787,17 @@ var GUI = (function () {
         terrainGenFolder.add(this.properties._mapParameters, "param").name("Perlin-Noise parameter").min(1.0).max(3.0).step(0.1);
         terrainGenFolder.open();
 
-        this._gui.add(this, "Reload").name("<b>RELOAD</b>");
+        this._gui.add(this, "Reload").name("<b>GENERATE</b>");
     };
     return GUI;
 })();
-function CreateCanvas(inWidth, inHeight, debug) {
+function CreateCanvas(inWidth, inHeight, debug, id) {
     if (typeof debug === "undefined") { debug = false; }
+    if (typeof id === "undefined") { id = undefined; }
     var canvas = document.createElement("canvas");
+    if (id) {
+        canvas.id = id;
+    }
     canvas.classList.add("DEBUG");
     canvas.width = inWidth;
     canvas.height = inHeight;
@@ -808,6 +837,18 @@ function Trace(message) {
         this.TRACES[message] = message;
     }
 }
+var UTILS;
+(function (UTILS) {
+    var Utils = (function () {
+        function Utils() {
+        }
+        Utils.Clamp = function (scalar, min, max) {
+            return Math.max(Math.min(scalar, max), min);
+        };
+        return Utils;
+    })();
+    UTILS.Utils = Utils;
+})(UTILS || (UTILS = {}));
 // CREDITS to Jérémy Bouny : https://github.com/jbouny/terrain-generator/blob/master/randoms/mersenne-twister.js
 // CREDITS to Makoto Matsumoto and Takuji Nishimura and Sean McCullough http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html
 
@@ -946,94 +987,26 @@ var MersenneTwister = (function () {
 // Modified by Alex
 var TERRAIN;
 (function (TERRAIN) {
-    var LandscapeGenerator = (function () {
-        function LandscapeGenerator(params) {
-            this._gradientBase = 0;
+    var HeightMapGenerator = (function () {
+        function HeightMapGenerator(params) {
             this.Parameters = params;
         }
-        LandscapeGenerator.prototype.getHeightColorFor = function (height) {
-            var gradientCanvas;
-            var width = this._maxHeight | 0 - this._minHeight | 0;
-
-            if (this._gradient == null) {
-                gradientCanvas = CreateCanvas(width, 2, true);
-                var ctx = gradientCanvas.getContext("2d");
-                var gradient1 = ctx.createLinearGradient(0, 0, gradientCanvas.width, 1);
-                var gradient2 = ctx.createLinearGradient(0, 0, gradientCanvas.width, 1);
-                gradient1.addColorStop(0, "#088A08"); // LIGHTGREEN
-                gradient1.addColorStop(0.0111, "#088A08"); // YELLOW
-                gradient1.addColorStop(0.0112, "#5E610B"); // YELLOW
-                gradient1.addColorStop(0.7, "#190B07"); // DARKBROWN
-                gradient1.addColorStop(1, "#BDBDBD"); // GREy
-                gradient2.addColorStop(0, "#000000");
-                gradient2.addColorStop(1, "#ffffff");
-                ctx.fillStyle = gradient1;
-                ctx.fillRect(0, 0, gradientCanvas.width, 1);
-                ctx.fillStyle = gradient2;
-                ctx.fillRect(0, 1, gradientCanvas.width, 1);
-                this._gradient = ctx.getImageData(0, 0, gradientCanvas.width, gradientCanvas.height);
-            }
-            var index = (height * (width) * 4) | 0;
-            index -= index % 4;
-            index = index % ((width) * 4);
-            index += this._gradientBase;
-            return [this._gradient.data[index], this._gradient.data[index + 1], this._gradient.data[index + 2]];
-            //return [height, height, height];
-        };
-
-        LandscapeGenerator.prototype.colorizeMesh = function (mesh) {
-            var positionData = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
-            var colorData = [];
-
-            Trace("Mapping");
-            var copy = positionData.map(function (x, i) {
-                return i % 3 == 1 ? x : 0;
-            });
-            Trace("Mapping");
-
-            Trace("Sorting");
-
-            //var copySorted = copy.sort((a,b)=>a>b?1:-1);
-            //this._maxHeight = copy.pop();
-            //this._minHeight = copy.shift();
-            console.log("Total number of vertices:" + copy.length / 3);
-            this._maxHeight = copy.reduce(function (lastItem, newItem) {
-                return lastItem > newItem ? lastItem : newItem;
-            });
-            this._minHeight = copy.reduce(function (lastItem, newItem) {
-                return lastItem < newItem ? lastItem : newItem;
-            });
-            var heightScale = this._maxHeight - this._minHeight;
-
-            Trace("Sorting");
-
-            Trace("Color fetching");
-            for (var i = 1; i < positionData.length; i += 3) {
-                var h = (positionData[i] - this._minHeight) / heightScale;
-                var color = this.getHeightColorFor(h);
-                colorData.push(color[0] / 255, color[1] / 255, color[2] / 255);
-            }
-            Trace("Color fetching");
-
-            mesh.setVerticesData(colorData, BABYLON.VertexBuffer.ColorKind, true);
-        };
-
-        LandscapeGenerator.prototype.GenerateOn = function (scene) {
+        HeightMapGenerator.prototype.GenerateHeightMap = function () {
             var _this = this;
             var random = this.Parameters.random;
 
-            var terrainGen = new TERRAIN.TerrainGenerator({
+            var noiseGenerator = new TERRAIN.ComplexNoiseGenerator({
                 width: this.Parameters.width,
                 height: this.Parameters.height,
                 displayCanvas: this.Parameters.displayCanvas,
                 minHeight: this.Parameters.minHeight,
                 maxHeight: this.Parameters.maxHeight,
-                submesh: this.Parameters.submesh,
+                subdivisions: this.Parameters.subdivisions,
                 steps: []
             });
 
             // Generate noise
-            terrainGen.AddStep(function (tg) {
+            noiseGenerator.AddStep(function (tg) {
                 var noiseGen = new TERRAIN.PerlinNoiseGenerator({
                     displayCanvas: tg.Parameters.displayCanvas,
                     height: tg.Parameters.height,
@@ -1049,11 +1022,12 @@ var TERRAIN;
             }, "Perlin noise generation");
 
             // Generate ravine path
-            terrainGen.AddStep(function (tg) {
-                var pathCanvas = CreateCanvas(_this.Parameters.width, _this.Parameters.height, _this.Parameters.displayCanvas);
+            noiseGenerator.AddStep(function (tg) {
+                var SHRINK = _this.Parameters.shrink;
+                var pathCanvas = CreateCanvas(_this.Parameters.width / SHRINK, _this.Parameters.height / SHRINK, _this.Parameters.displayCanvas, "ravinePathCanvas");
                 var pathGen = new TERRAIN.PathGenerator(random);
 
-                pathGen.MakePath(pathCanvas, _this.Parameters.pathBottomOffset, _this.Parameters.pathTopOffset);
+                pathGen.MakePath(pathCanvas, _this.Parameters.pathBottomOffset / SHRINK, _this.Parameters.pathTopOffset / SHRINK);
 
                 tg.DraftCanvases["pathCanvas"] = pathCanvas;
 
@@ -1061,29 +1035,25 @@ var TERRAIN;
             }, "Path generation");
 
             // Blur path
-            terrainGen.AddStep(function (tg) {
+            noiseGenerator.AddStep(function (tg) {
                 var pathCanvas = tg.DraftCanvases["pathCanvas"];
 
                 var bleedBlurPass1 = new FILTERS.BleedFeed(pathCanvas, 30, 6, true);
-                var bleedBlurPass2 = new FILTERS.BleedFeed(pathCanvas, 8, 3, true);
-                var bleedBlurPass3 = new FILTERS.BleedFeed(pathCanvas, 100, 1, true);
-
-                //var pathBlurFilter = new FILTERS.StackBlurFilter(70);
                 if (bleedBlurPass1.Check(pathCanvas))
                     bleedBlurPass1.Apply(pathCanvas);
+                var bleedBlurPass2 = new FILTERS.BleedFeed(pathCanvas, 4, 3, true);
                 if (bleedBlurPass2.Check(pathCanvas))
                     bleedBlurPass2.Apply(pathCanvas);
+                var bleedBlurPass3 = new FILTERS.BleedFeed(pathCanvas, 30, 1, true);
                 if (bleedBlurPass3.Check(pathCanvas))
                     bleedBlurPass3.Apply(pathCanvas);
 
-                //if (pathBlurFilter.Check(pathCanvas)) pathBlurFilter.Apply(pathCanvas);
                 return true;
             }, "Path blurring");
 
             // Make secondary noise
-            terrainGen.AddStep(function (tg) {
-                // snCanvas = secondaryNoiseCanvas
-                var snCanvas = CreateCanvas(_this.Parameters.width / 2, _this.Parameters.height / 2, true);
+            noiseGenerator.AddStep(function (tg) {
+                var snCanvas = CreateCanvas(_this.Parameters.width / 2, _this.Parameters.height / 2, _this.Parameters.displayCanvas, "secondaryNoiseCanvas");
                 var ctx = snCanvas.getContext("2d");
 
                 var pathGen = new TERRAIN.PathGenerator(random);
@@ -1112,7 +1082,7 @@ var TERRAIN;
             }, "Secondary noise generation");
 
             // Composite them
-            terrainGen.AddStep(function (tg) {
+            noiseGenerator.AddStep(function (tg) {
                 var noiseCanvas = tg.DraftCanvases["noiseCanvas"];
                 var pathCanvas = tg.DraftCanvases["pathCanvas"];
                 var snCanvas = tg.DraftCanvases["snCanvas"];
@@ -1121,7 +1091,7 @@ var TERRAIN;
                 var softBlur = new FILTERS.StackBlurFilter(12);
                 var copyNoise = new FILTERS.CopyOverwriteFilter(noiseCanvas);
                 var engraveDestruction = new FILTERS.DarknessCopyFilter(FILTERS.Upscale(snCanvas, _this.Parameters.width, _this.Parameters.height));
-                var engravePath = new FILTERS.DarknessCopyFilter(pathCanvas);
+                var engravePath = new FILTERS.DarknessCopyFilter(FILTERS.Upscale(pathCanvas, _this.Parameters.width, _this.Parameters.height));
 
                 copyNoise.Apply(tg.Canvas);
                 engraveDestruction.Apply(tg.Canvas);
@@ -1132,88 +1102,167 @@ var TERRAIN;
                 return true;
             }, "Noise compositing");
 
+            // Fire the chain
             Trace("Terrain");
-            var noise = terrainGen.Generate();
+            var noise = noiseGenerator.Generate();
             Trace("Terrain");
 
-            Trace("Mesh from height map");
-            var mesh = terrainGen.NoiseToBabylonMesh(noise, scene);
-            Trace("Mesh from height map");
-
-            Trace("Colorize mesh");
-            this.colorizeMesh(mesh);
-            Trace("Colorize mesh");
-
-            return mesh;
+            return noise;
         };
-        return LandscapeGenerator;
+        return HeightMapGenerator;
     })();
-    TERRAIN.LandscapeGenerator = LandscapeGenerator;
+    TERRAIN.HeightMapGenerator = HeightMapGenerator;
 })(TERRAIN || (TERRAIN = {}));
-// CREDITS TO Jérémy Bouny : https://github.com/jbouny/terrain-generator/blob/master/terraingen.js
-// Modified by Alex
 var TERRAIN;
 (function (TERRAIN) {
     var TerrainGenerator = (function () {
         function TerrainGenerator(params) {
-            // Manage default parameters
-            this.Parameters = params || {};
-            this.Parameters.depth = this.Parameters.depth || 10;
-            this.Parameters.width = this.Parameters.width || 100;
-            this.Parameters.height = this.Parameters.height || 100;
-            this.Parameters.steps = this.Parameters.steps || [];
-
-            this.Steps = this.Parameters.steps;
-            this.DraftCanvases = {};
-            this._stepCounter = 0;
+            this._gradientBase = 0;
+            this.Parameters = params;
+            this.Parameters.colors = this.Parameters.colors || [[0, "#088A08"], [0.0111, "#088A08"], [0.0112, "#5E610B"], [0.7, "#190B07"], [1, "#BDBDBD"]];
+            // LIGHTGREEN     YELLOW                YELLOW              DARKBROWN           GREY
         }
-        TerrainGenerator.prototype.Generate = function () {
-            if (typeof this.Canvas == 'undefined')
-                this.Canvas = CreateCanvas(this.Parameters.width, this.Parameters.height, this.Parameters.displayCanvas);
-            this.Parameters.width = this.Canvas.width;
-            this.Parameters.height = this.Canvas.height;
+        TerrainGenerator.prototype.getHeightColorFor = function (height) {
+            var gradientCanvas;
+            var width = this._maxHeight | 0 - this._minHeight | 0;
 
-            while (this.Steps.length > 0) {
-                var actualStep = this.Steps.shift();
-                var result = actualStep.Execute(this);
-                if (!result) {
-                    this.Steps.unshift(actualStep);
+            if (this._gradient == null) {
+                gradientCanvas = CreateCanvas(width, 2, this.Parameters.displayCanvas, "gradientsCanvas");
+                var ctx = gradientCanvas.getContext("2d");
+                var mountainGradient = ctx.createLinearGradient(0, 0, gradientCanvas.width, 1);
+                var gradient2 = ctx.createLinearGradient(0, 0, gradientCanvas.width, 1);
+                for (var i = 0; i < this.Parameters.colors.length; i++) {
+                    var colorStop = this.Parameters.colors[i];
+                    mountainGradient.addColorStop(colorStop[0], colorStop[1]);
                 }
+                gradient2.addColorStop(0, "#000000");
+                gradient2.addColorStop(1, "#ffffff");
+                ctx.fillStyle = mountainGradient;
+                ctx.fillRect(0, 0, gradientCanvas.width, 1);
+                ctx.fillStyle = gradient2;
+                ctx.fillRect(0, 1, gradientCanvas.width, 1);
+                this._gradient = ctx.getImageData(0, 0, gradientCanvas.width, gradientCanvas.height);
+            }
+            var index = (height * (width) * 4) | 0;
+            index -= index % 4;
+            index = index % ((width) * 4);
+            index += this._gradientBase;
+            return [this._gradient.data[index], this._gradient.data[index + 1], this._gradient.data[index + 2]];
+            //return [height, height, height];
+        };
+
+        TerrainGenerator.prototype.ColorizeMesh = function (mesh) {
+            var positionData = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+            var colorData = [];
+
+            Trace("Mapping");
+            var copy = positionData.map(function (x, i) {
+                return i % 3 == 1 ? x : 0;
+            });
+            Trace("Mapping");
+
+            Trace("Min/Max");
+
+            //var copySorted = copy.sort((a,b)=>a>b?1:-1);
+            //this._maxHeight = copy.pop();
+            //this._minHeight = copy.shift();
+            console.log("Total number of vertices:" + copy.length / 3);
+
+            //this._maxHeight = copy.reduce((lastItem, newItem) => lastItem > newItem ? lastItem : newItem);
+            this._maxHeight = Math.max.apply(null, copy);
+
+            //this._minHeight = copy.reduce((lastItem, newItem) => lastItem < newItem ? lastItem : newItem);
+            this._minHeight = Math.min.apply(null, copy);
+            var heightScale = this._maxHeight - this._minHeight;
+
+            Trace("Min/Max");
+
+            Trace("Color fetching");
+            for (var i = 1; i < positionData.length; i += 3) {
+                var h = (positionData[i] - this._minHeight) / heightScale;
+                var color = this.getHeightColorFor(h);
+                colorData.push(color[0] / 255, color[1] / 255, color[2] / 255);
+            }
+            Trace("Color fetching");
+
+            mesh.setVerticesData(BABYLON.VertexBuffer.ColorKind, colorData, true);
+        };
+
+        TerrainGenerator.prototype.GenerateWrappingMesh = function (mesh, scene) {
+            var vertices = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+            var bbox = mesh.getBoundingInfo();
+            var xMin = -bbox.minimum.x;
+            var xMax = -xMin;
+            var zMin = -bbox.minimum.z;
+            var zMax = -zMin;
+            var checkTriadIsOnXEdge = function (x, y, z) {
+                if (x == xMin || x == xMax)
+                    return true;
+                return false;
+            };
+            var checkTriadIsOnZEdge = function (x, y, z) {
+                if (z == zMin || z == zMax)
+                    return true;
+                return false;
+            };
+            var wrappingPoints = [];
+            for (var i = 0; i < vertices.length; i += 3) {
+                var x = vertices[i];
+                var y = vertices[i + 1];
+                var z = vertices[i + 2];
+                if (checkTriadIsOnXEdge(x, y, z)) {
+                    wrappingPoints.push(x, y, z);
+                    wrappingPoints.push(x, 0, z);
+                } else if (checkTriadIsOnZEdge(x, y, z)) {
+                    wrappingPoints.unshift(x, 0, z);
+                    wrappingPoints.unshift(x, y, z);
+                }
+                // Z edges will be first half, X edges will be second half
             }
 
-            return this.Canvas;
+            var wrappingIndices = [];
+            var triplets = wrappingPoints.length / 3;
+            for (var i = 0; i < (triplets / 2 - 4); i += 2) {
+                if (Math.abs(i - triplets / 4 + 2) < 4)
+                    continue;
+                else if (i < triplets / 4) {
+                    wrappingIndices.push(i, (i + 2), (i + 3));
+                    wrappingIndices.push(i, (i + 3), (i + 1));
+                } else {
+                    wrappingIndices.push(i, (i + 3), (i + 2));
+                    wrappingIndices.push(i, (i + 1), (i + 3));
+                }
+            }
+            console.log(wrappingIndices);
+            var offset = triplets / 2;
+            for (var i = offset; i < triplets - 6; i += 2) {
+                wrappingIndices.push(i, i + 1, i + 5);
+                wrappingIndices.push(i, i + 5, i + 4);
+                i += 2;
+                wrappingIndices.push(i, i + 5, i + 1);
+                wrappingIndices.push(i, i + 4, i + 5);
+            }
+
+            var wrappingNormals = [];
+            BABYLON.VertexData.ComputeNormals(wrappingPoints, wrappingIndices, wrappingNormals);
+
+            var vertexData = new BABYLON.VertexData();
+            vertexData.indices = wrappingIndices;
+            vertexData.positions = wrappingPoints;
+            vertexData.normals = wrappingNormals;
+            var wrappingMesh = new BABYLON.Mesh("wrapper", scene);
+            vertexData.applyToMesh(wrappingMesh, false);
+
+            return wrappingMesh;
         };
 
-        TerrainGenerator.prototype.AddStep = function (step, tag) {
-            tag = tag || "Step " + this._stepCounter;
-            this._stepCounter += 1;
-            this.Steps.push(new TerrainGeneratorStep(step, tag));
-        };
-
-        TerrainGenerator.prototype.NoiseToBabylonMesh = function (noise, scene) {
-            var terrainMesh = BABYLON.Mesh.CreateGroundFromHeightMapOfCanvas(name, noise, this.Parameters.width, this.Parameters.height, this.Parameters.submesh, this.Parameters.minHeight, this.Parameters.maxHeight, scene, false);
+        TerrainGenerator.prototype.ConvertNoiseToBabylonMesh = function (noise, scene) {
+            var terrainMesh = BABYLON.Mesh.CreateGroundFromHeightMapOfCanvas(name, noise, this.Parameters.width, this.Parameters.height, this.Parameters.subdivisions, this.Parameters.minHeight, this.Parameters.maxHeight, scene, false);
             return terrainMesh;
         };
         return TerrainGenerator;
     })();
     TERRAIN.TerrainGenerator = TerrainGenerator;
-
-    var TerrainGeneratorStep = (function () {
-        function TerrainGeneratorStep(func, tag) {
-            this._func = func;
-            this._tag = tag;
-        }
-        TerrainGeneratorStep.prototype.Execute = function (executeOn) {
-            console.time(JSON.stringify(this._tag));
-            console.log("Starting step:", this._tag);
-            var result = this._func(executeOn);
-            console.timeEnd(JSON.stringify(this._tag));
-            console.log("Finished: ", this._tag, ".");
-            return result;
-        };
-        return TerrainGeneratorStep;
-    })();
-    TERRAIN.TerrainGeneratorStep = TerrainGeneratorStep;
 })(TERRAIN || (TERRAIN = {}));
 var TERRAIN;
 (function (TERRAIN) {
@@ -1229,14 +1278,56 @@ var TERRAIN;
             var ctrlPoints = this.GeneratePath(canvas, from, to);
             var cmspline = this.makeCatmull(ctrlPoints);
             this.drawPath(canvas, cmspline, opaque);
-
             return canvas;
+        };
+
+        PathGenerator.prototype.GeneratePath = function (canvas, from, to) {
+            from = from && [from] || [from, from];
+            to = to && [to] || [to, to];
+            from[0] = from[0] || 0;
+            to[0] = to[0] || canvas.width;
+            from[1] = from[1] || canvas.height;
+            to[1] = to[1] || 0;
+
+            // Total steps to take
+            var STEPS = 10;
+            var ITERATIONS = 15;
+
+            // The general direction of the path
+            var dx = (to[0] - from[0]) / STEPS;
+            var dy = (to[1] - from[1]) / STEPS;
+
+            // The normalof the direction
+            var normal = [-dy / 2, dx / 2];
+
+            // Magnitude of the normal
+            var abnormal = [-normal[0], -normal[1]];
+
+            var ctrlPoints = [];
+            ctrlPoints.push(from, from);
+
+            var intermediatePoints = [];
+            for (var i = 1; i < STEPS; i++) {
+                intermediatePoints.push([from[0] + dx * i, from[1] + dy * i]);
+            }
+            for (var i = 0; i < ITERATIONS; i++) {
+                var randomElement = intermediatePoints[Math.floor(this.r.Random() * intermediatePoints.length)];
+                var offset = (i % 2) ? normal : abnormal;
+                randomElement[0] += offset[0];
+                randomElement[1] += offset[1];
+            }
+            for (var i = 0; i < intermediatePoints.length; i++) {
+                ctrlPoints.push(intermediatePoints[i]);
+            }
+
+            ctrlPoints.push(to, to);
+            return ctrlPoints;
         };
 
         /**
         * This is a generator who generates a path.
         **/
-        PathGenerator.prototype.GeneratePath = function (canvas, from, to) {
+        PathGenerator.prototype._GeneratePath = function (canvas, from, to) {
             // preparing defaults
             from = from && [from] || [from, from];
             to = to && [to] || [to, to];
@@ -1285,7 +1376,7 @@ var TERRAIN;
                     lastPinIndex = i;
 
                     // of length offset/2 tops, for one direction
-                    var l = Math.random() * offset - offset / 2;
+                    var l = this.r.Random() * offset - offset / 2;
 
                     // and if this pin is too different from the last one
                     if (Math.abs(l - lastPinLength) > offset * 0.5 && l * lastPinLength < 0) {
@@ -1376,7 +1467,7 @@ var TERRAIN;
     var PerlinNoiseGenerator = (function () {
         function PerlinNoiseGenerator(inParameters) {
             /**
-            * This part is based on the snippest :
+            * This part is based on the snippet :
             * https://gist.github.com/donpark/1796361
             */
             inParameters.param = inParameters.param || 1.1;
@@ -1430,11 +1521,73 @@ var TERRAIN;
     })();
     TERRAIN.PerlinNoiseGenerator = PerlinNoiseGenerator;
 })(TERRAIN || (TERRAIN = {}));
-/// <reference path="LandscapeGenerator.ts" />
+// CREDITS TO Jérémy Bouny : https://github.com/jbouny/terrain-generator/blob/master/terraingen.js
+// Modified by Alex
+var TERRAIN;
+(function (TERRAIN) {
+    var ComplexNoiseGenerator = (function () {
+        function ComplexNoiseGenerator(params) {
+            // Manage default parameters
+            this.Parameters = params || {};
+            this.Parameters.depth = this.Parameters.depth || 10;
+            this.Parameters.width = this.Parameters.width || 100;
+            this.Parameters.height = this.Parameters.height || 100;
+            this.Parameters.steps = this.Parameters.steps || [];
+
+            this.Steps = this.Parameters.steps;
+            this.DraftCanvases = {};
+            this._stepCounter = 0;
+        }
+        ComplexNoiseGenerator.prototype.Generate = function () {
+            if (typeof this.Canvas == 'undefined')
+                this.Canvas = CreateCanvas(this.Parameters.width, this.Parameters.height, this.Parameters.displayCanvas);
+            this.Parameters.width = this.Canvas.width;
+            this.Parameters.height = this.Canvas.height;
+
+            while (this.Steps.length > 0) {
+                var actualStep = this.Steps.shift();
+                var result = actualStep.Execute(this);
+                if (!result) {
+                    this.Steps.unshift(actualStep);
+                }
+            }
+
+            return this.Canvas;
+        };
+
+        ComplexNoiseGenerator.prototype.AddStep = function (step, tag) {
+            tag = tag || "Step " + this._stepCounter;
+            this._stepCounter += 1;
+            this.Steps.push(new ComplexNoiseGenStep(step, tag));
+        };
+        return ComplexNoiseGenerator;
+    })();
+    TERRAIN.ComplexNoiseGenerator = ComplexNoiseGenerator;
+
+    var ComplexNoiseGenStep = (function () {
+        function ComplexNoiseGenStep(func, tag) {
+            this._func = func;
+            this._tag = tag;
+        }
+        ComplexNoiseGenStep.prototype.Execute = function (executeOn) {
+            console.time(JSON.stringify(this._tag));
+            console.log("Starting step:", this._tag);
+            var result = this._func(executeOn);
+            console.timeEnd(JSON.stringify(this._tag));
+            console.log("Finished: ", this._tag, ".");
+            return result;
+        };
+        return ComplexNoiseGenStep;
+    })();
+    TERRAIN.ComplexNoiseGenStep = ComplexNoiseGenStep;
+})(TERRAIN || (TERRAIN = {}));
+/// <reference path="HeightMapGenerator.ts" />
 /// <reference path="TerrainGenerator.ts" />
 /// <reference path="PathGenerator.ts" />
 /// <reference path="PerlinNoiseGenerator.ts" />
+/// <reference path="ComplexNoiseGenerator.ts" />
 /// <reference path="HTMLTools.ts" />
+/// <reference path="Utils.ts" />
 /// <reference path="MersenneTwister.ts" />
 /// <reference path="BabylonExtensions.ts" />
 /// <reference path="Gui.ts" />

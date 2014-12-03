@@ -39,7 +39,7 @@ module TERRAIN {
 
         constructor(inParameters: NoiseParameters) {
             /**
-             * This part is based on the snippest :
+             * This part is based on the snippet :
              * https://gist.github.com/donpark/1796361
              */
 

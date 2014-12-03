@@ -1,4 +1,5 @@
 /// <reference path="HTMLTools.ts" />
+/// <reference path="Utils.ts" />
 /// <reference path="MersenneTwister.ts" />
 /// <reference path="BabylonExtensions.ts" />
 /// <reference path="Gui.ts" />

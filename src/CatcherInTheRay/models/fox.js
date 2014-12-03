@@ -59,6 +59,4 @@ var model = {
     "edges" : []
 
 };
-
-postMessage( model );
-close();
+if (module) module.exports = model;

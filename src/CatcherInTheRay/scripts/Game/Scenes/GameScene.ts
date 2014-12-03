@@ -10,15 +10,15 @@
             _randomSeed: number;
             _debug: boolean;
             _useFlatShading: boolean;
-            _mapParams: TERRAIN.LandscapeGeneratorParameters;
+            _mapParams: TERRAIN.HeightMapGeneratorParams;
 
-            constructor(gameWorld: GAME.GameWorld, parameters: GameParameters, mapParameters: TERRAIN.LandscapeGeneratorParameters) {
+            constructor(gameWorld: GAME.GameWorld, parameters: GameParameters, mapParameters: TERRAIN.HeightMapGeneratorParams) {
                 this._randomSeed = parameters.randomSeed;
                 this._debug = parameters.debug || true;
                 this._useFlatShading = parameters.useFlatShading;
                 this._mapParams = mapParameters;
                 if (this._useFlatShading) {
-                    this._mapParams.submesh = Math.min(this._mapParams.submesh, 100);
+                    this._mapParams.subdivisions = Math.min(this._mapParams.subdivisions, 100);
                 }
                 super(gameWorld);
             }
@@ -69,20 +69,53 @@
 
 
                 // Landscape generation
-                var landscapeGenerator = new TERRAIN.LandscapeGenerator(this._mapParams);
+                var landscapeGenerator = new TERRAIN.HeightMapGenerator(this._mapParams);
+                var noise = landscapeGenerator.GenerateHeightMap();
 
-                var terrainMesh = landscapeGenerator.GenerateOn(scene);
+                // Terrain from the heightmap
+                var terrainGenerator = new TERRAIN.TerrainGenerator({
+                    displayCanvas: this._mapParams.displayCanvas,
+                    height: this._mapParams.height,
+                    width: this._mapParams.width,
+                    maxHeight: this._mapParams.maxHeight,
+                    minHeight: this._mapParams.minHeight,
+                    subdivisions: this._mapParams.subdivisions
+                });
+
+                // Heightmap to mesh
+                Trace("Mesh from height map");
+                var mountainMesh = terrainGenerator.ConvertNoiseToBabylonMesh(noise, scene);
+                mountainMesh.name = "MountainMesh";
+                Trace("Mesh from height map");
+
+                // Generate wrapping mesh to hide sides
+                Trace("Generating sides");
+                var wrappingMesh = terrainGenerator.GenerateWrappingMesh(mountainMesh, scene);
+                Trace("Generating sides");
+
+                // Colors to mesh
+                Trace("Colorize mesh");
+                terrainGenerator.ColorizeMesh(mountainMesh);
+                Trace("Colorize mesh");
+
                 if (this._useFlatShading) {
-                    terrainMesh.convertToFlatShadedMesh();
-                    var convertedVertices = terrainMesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+                    mountainMesh.convertToFlatShadedMesh();
+                    var convertedVertices = mountainMesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
                     console.log("Vertices after conversion: " + convertedVertices.length);
                 }
 
-                var groundMaterial = new BABYLON.StandardMaterial("groundMaterial", scene);
-                terrainMesh.material = groundMaterial;
-                groundMaterial.specularPower = 0;
-                groundMaterial.specularColor = BABYLON.Color3.FromInts(0, 0, 0);
-                terrainMesh.checkCollisions = true;
+                var mountainMaterial = new BABYLON.StandardMaterial("groundMaterial", scene);
+                mountainMesh.material = mountainMaterial;
+                mountainMaterial.specularPower = 0;
+                mountainMaterial.specularColor = BABYLON.Color3.FromInts(0, 0, 0);
+                mountainMesh.checkCollisions = true;
+
+                var mountainSideMaterial = new BABYLON.StandardMaterial("mountainSideMaterial", scene);
+                wrappingMesh.material = mountainSideMaterial;
+                mountainSideMaterial.specularPower = 0;
+                mountainSideMaterial.specularColor = BABYLON.Color3.FromInts(0, 0, 0);
+                mountainSideMaterial.diffuseColor = new BABYLON.Color3(0.43, 0.29, 0.03);
+                //mountainSideMaterial.diffuseTexture = new BABYLON.Texture("assets/normalmap.jpg", scene);
 
                 // Put start and end
                 var startOrb = BABYLON.Mesh.CreateSphere("startOrb", 30, 30, scene, true);
@@ -94,7 +127,6 @@
 
                 startOrb.position = new BABYLON.Vector3(this._mapParams.pathTopOffset - this._mapParams.width / 2, 20, this._mapParams.height / 2 - 10);
                 endOrb.position = new BABYLON.Vector3(this._mapParams.pathBottomOffset - this._mapParams.width / 2, 20, this._mapParams.height / -2 + 10);
-
 
 
                 return scene;

@@ -12,18 +12,59 @@
         **/
         MakePath(canvas: HTMLCanvasElement, from, to, opaque: boolean= true) {
             var ctrlPoints = this.GeneratePath(canvas, from, to)
-        var cmspline = this.makeCatmull(ctrlPoints);
+            var cmspline = this.makeCatmull(ctrlPoints);
             this.drawPath(canvas, cmspline, opaque);
-
             return canvas;
+        }
+
+        GeneratePath(canvas: HTMLCanvasElement, from, to): any[] {
+            from = from && [from] || [from, from];
+            to = to && [to] || [to, to];
+            from[0] = from[0] || 0;
+            to[0] = to[0] || canvas.width;
+            from[1] = from[1] || canvas.height;
+            to[1] = to[1] || 0;
+
+            // Total steps to take 
+            var STEPS = 10;
+            var ITERATIONS = 15;
+
+            // The general direction of the path
+            var dx = (to[0] - from[0]) / STEPS;
+            var dy = (to[1] - from[1]) / STEPS;
+
+            // The normalof the direction
+            var normal = [-dy/2, dx/2];
+
+            // Magnitude of the normal
+            var abnormal = [-normal[0], -normal[1]];
+
+            var ctrlPoints = [];
+            ctrlPoints.push(from, from);
+
+            var intermediatePoints = [];
+            for (var i = 1; i < STEPS; i++) {
+                intermediatePoints.push([from[0] + dx * i, from[1] + dy * i]);
+            }
+            for (var i = 0; i < ITERATIONS; i++) {
+                var randomElement = intermediatePoints[Math.floor(this.r.Random() * intermediatePoints.length)];
+                var offset = (i % 2) ? normal : abnormal;
+                randomElement[0] += offset[0];
+                randomElement[1] += offset[1];
+            }
+            for (var i = 0; i < intermediatePoints.length; i++) {
+                ctrlPoints.push(intermediatePoints[i]);
+            }
+
+            ctrlPoints.push(to, to);
+            return ctrlPoints;
         }
 
         /**
         * This is a generator who generates a path.
         **/
-        GeneratePath(canvas: HTMLCanvasElement, from, to): any[] {
+        _GeneratePath(canvas: HTMLCanvasElement, from, to): any[] {
             // preparing defaults 
-
 
             from = from && [from] || [from, from];
             to = to && [to] || [to, to];
@@ -74,7 +115,7 @@
                     // we put a pin
                     lastPinIndex = i;
                     // of length offset/2 tops, for one direction 
-                    var l = Math.random() * offset - offset / 2;
+                    var l = this.r.Random() * offset - offset / 2;
                     // and if this pin is too different from the last one
                     if (Math.abs(l - lastPinLength) > offset * 0.5
                         && l * lastPinLength < 0) {
