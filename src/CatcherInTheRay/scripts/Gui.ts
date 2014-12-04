@@ -41,7 +41,7 @@ class GUI {
         this._gui = new dat.GUI();
 
         var sceneFolder = this._gui.addFolder("Scenes");
-        sceneFolder.add(this.properties, "_sceneId", { "Test": GAME.Scenes.TEST, "Game": GAME.Scenes.GAME }).name("Scene")
+        sceneFolder.add(this.properties, "_sceneId", { "Test": GAME.Scenes.TEST, "Game": GAME.Scenes.GAME, "Animals": GAME.Scenes.ANIMAL }).name("Scene")
             .onChange((x) => this.properties._sceneId = +x);
         sceneFolder.open();
 
@@ -68,10 +68,10 @@ class GUI {
         });
 
         widthCtr.onChange(x=> {
-            pathBottomCtr.setValue(Math.min(x,pathBottomCtr.getValue())).max(x);
+            pathBottomCtr.setValue(Math.min(x, pathBottomCtr.getValue())).max(x);
             pathTopCtr.setValue(Math.min(x, pathTopCtr.getValue())).max(x);
         });
-        
+
         terrainGenFolder.add(this.properties._mapParameters, "param").name("Perlin-Noise parameter").min(1.0).max(3.0).step(0.1);
         terrainGenFolder.open();
 

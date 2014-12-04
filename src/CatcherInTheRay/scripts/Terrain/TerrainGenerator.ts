@@ -25,7 +25,7 @@
             // LIGHTGREEN     YELLOW                YELLOW              DARKBROWN           GREY
         }
 
-        private getHeightColorFor(height: number): number[]{
+        private getHeightColorFor(height: number): number[] {
             var gradientCanvas: HTMLCanvasElement;
             var width = this._maxHeight | 0 - this._minHeight | 0;
 
@@ -85,14 +85,16 @@
 
             mesh.setVerticesData(BABYLON.VertexBuffer.ColorKind, colorData, true);
         }
-        
+
         public GenerateWrappingMesh(mesh: BABYLON.Mesh, scene: BABYLON.Scene): BABYLON.Mesh {
             var vertices = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
             var bbox = mesh.getBoundingInfo();
-            var xMin = -bbox.minimum.x;
-            var xMax = -xMin;
-            var zMin = -bbox.minimum.z;
-            var zMax = -zMin;
+            var xMin = bbox.minimum.x;
+            var xMax = bbox.maximum.x;
+            var zMin = bbox.minimum.z;
+            var zMax = bbox.maximum.z;
+            var yMin = bbox.minimum.y;
+            var yMax = bbox.maximum.y;
             var checkTriadIsOnXEdge = function (x: number, y: number, z: number): boolean {
                 if (x == xMin || x == xMax) return true;
                 return false;
@@ -101,41 +103,39 @@
                 if (z == zMin || z == zMax) return true;
                 return false;
             }
-            var wrappingPoints = [];
+
+            var xLeft = [];
+            var xRight = [];
+            var zTop = [];
+            var zBottom = [];
+            var actualBottomShift = 0;
+            var maxDistance = Math.sqrt(xMin * xMin + zMin * zMin);
             for (var i = 0; i < vertices.length; i += 3) {
                 var x = vertices[i];
                 var y = vertices[i + 1];
                 var z = vertices[i + 2];
+                var d = Math.sqrt(x * x + z * z);
                 if (checkTriadIsOnXEdge(x, y, z)) {
-                    wrappingPoints.push(x, y, z);
-                    wrappingPoints.push(x, 0, z);
+                    if (x == xMin) xLeft.push(x, y, z, x, -70 - Math.floor(100 * maxDistance / d) + (Math.random() * 20), z);
+                    else xRight.unshift(x, y, z, x, -70 - Math.floor(100 * maxDistance / d) + (Math.random() * 20), z);
                 } else if (checkTriadIsOnZEdge(x, y, z)) {
-                    wrappingPoints.unshift(x, 0, z);
-                    wrappingPoints.unshift(x, y, z);
+                    if (z == zMin) zBottom.push(x, y, z, x, -70 - Math.floor(100 * maxDistance / d) + (Math.random() * 20), z);
+                    else zTop.unshift(x, y, z, x, -70 - Math.floor(100 * maxDistance / d) + (Math.random() * 20), z);
                 }
-                // Z edges will be first half, X edges will be second half
+
+            }
+            var wrappingPoints = xRight.concat(zTop, xLeft, zBottom);
+            var wrappingUvs = [];
+            var uvxprog = 1 / (wrappingPoints.length / 6);
+            for (var i = 0; i < wrappingPoints.length / 3; i += 2) {
+                wrappingUvs.push(uvxprog * i, wrappingPoints[3 * i + 1] / yMax, uvxprog * i,0);
             }
 
             var wrappingIndices = [];
             var triplets = wrappingPoints.length / 3; // = subdiv * 8
-            for (var i = 0; i < (triplets / 2 - 4); i += 2) {
-                if (Math.abs(i - triplets / 4 + 2) < 4) continue; // to avoid cross-map triangles
-                else if (i < triplets / 4) {
-                    wrappingIndices.push(i, (i + 2), (i + 3));
-                    wrappingIndices.push(i, (i + 3), (i + 1));
-                } else {
-                    wrappingIndices.push(i, (i + 3), (i + 2));
-                    wrappingIndices.push(i, (i + 1), (i + 3));
-                }
-            }
-            console.log(wrappingIndices);
-            var offset = triplets / 2;
-            for (var i = offset; i < triplets - 6; i += 2) {
-                wrappingIndices.push(i, i + 1, i + 5);
-                wrappingIndices.push(i, i + 5, i + 4);
-                i += 2;
-                wrappingIndices.push(i, i + 5, i + 1);
-                wrappingIndices.push(i, i + 4, i + 5);
+            for (var i = 0; i < triplets; i += 2) {
+                wrappingIndices.push(i, (i + 1) % triplets, (i + 3) % triplets);
+                wrappingIndices.push((i + 2) % triplets, i, (i + 3) % triplets);
             }
 
             var wrappingNormals = [];
@@ -145,6 +145,7 @@
             vertexData.indices = wrappingIndices;
             vertexData.positions = wrappingPoints;
             vertexData.normals = wrappingNormals;
+            vertexData.uvs = wrappingUvs;
             var wrappingMesh = new BABYLON.Mesh("wrapper", scene);
             vertexData.applyToMesh(wrappingMesh, false);
 

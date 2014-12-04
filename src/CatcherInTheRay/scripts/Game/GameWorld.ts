@@ -62,6 +62,9 @@ module GAME {
 
             var gameScene = new SCENES.GameScene(this, parameters._gameParameters, parameters._mapParameters);
             this._scenes["GAME"] = gameScene;
+
+            var animalScene = new SCENES.AnimalScene(this);
+            this._scenes["ANIMAL"] = gameScene;
         }
 
         extendCanvas(fullify: FullifyStates) {
@@ -159,6 +162,9 @@ module GAME {
                 case Scenes.GAME:
                     this._scene = this._scenes["GAME"].BuildScene();
                     break;
+                case Scenes.ANIMAL:
+                    this._scene = this._scenes["ANIMAL"].BuildScene();
+                    break;
             }
 
             this._scene.registerBeforeRender(() => {
@@ -176,6 +182,7 @@ module GAME {
     export enum Scenes {
         TEST = 0,
         MAIN = 1,
-        GAME = 2
+        GAME = 2,
+        ANIMAL = 3
     };
 }

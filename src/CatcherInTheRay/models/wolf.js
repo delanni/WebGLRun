@@ -1,17 +1,4 @@
-// Converted from: ../files/srcModels/01_black_soup/quadruped_A/wolf/wolfDash_A_0010/obj/wolfDash_A_001.obj
-//  vertices: 494
-//  faces: 984
-//  normals: 0
-//  colors: 6
-//  uvs: 680
-//  materials: 1
-//  edges: 0
-//
-//  Generated with OBJ -> Three.js converter
-//  http://github.com/alteredq/three.js/blob/master/utils/exporters/convert_obj_three.py
-
-
-var model = {
+{
 
     "version" : 2,
     
@@ -62,7 +49,4 @@ var model = {
 
     "edges" : []
 
-};
-
-postMessage( model );
-close();
+}

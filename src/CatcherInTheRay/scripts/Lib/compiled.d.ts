@@ -153,6 +153,15 @@ declare module GAME {
         TEST = 0,
         MAIN = 1,
         GAME = 2,
+        ANIMAL = 3,
+    }
+}
+declare module GAME {
+    module SCENES {
+        class AnimalScene extends SceneBuilder {
+            constructor(gameWorld: GameWorld);
+            public BuildSceneAround(scene: BABYLON.Scene): BABYLON.Scene;
+        }
     }
 }
 declare module dat {

@@ -521,7 +521,9 @@ var GAME;
                 mountainSideMaterial.specularColor = BABYLON.Color3.FromInts(0, 0, 0);
                 mountainSideMaterial.diffuseColor = new BABYLON.Color3(0.43, 0.29, 0.03);
 
-                //mountainSideMaterial.diffuseTexture = new BABYLON.Texture("assets/normalmap.jpg", scene);
+                // source: https://elliptic-games.com/images/Milestone1-2.jpg
+                mountainSideMaterial.bumpTexture = new BABYLON.Texture("assets/noisenormals.jpg", scene);
+
                 // Put start and end
                 var startOrb = BABYLON.Mesh.CreateSphere("startOrb", 30, 30, scene, true);
                 startOrb.material = new BABYLON.StandardMaterial("startOrbMat", scene);
@@ -533,6 +535,12 @@ var GAME;
                 startOrb.position = new BABYLON.Vector3(this._mapParams.pathTopOffset - this._mapParams.width / 2, 20, this._mapParams.height / 2 - 10);
                 endOrb.position = new BABYLON.Vector3(this._mapParams.pathBottomOffset - this._mapParams.width / 2, 20, this._mapParams.height / -2 + 10);
 
+                //window.addEventListener("click", function () {
+                //    // We try to pick an object
+                //    var pickResult = scene.pick(scene.pointerX, scene.pointerY);
+                //    console.log(pickResult);
+                //    pickResult.pickedMesh.material.wireframe = !pickResult.pickedMesh.material.wireframe;
+                //});
                 return scene;
             };
             return GameScene;
@@ -598,6 +606,9 @@ var GAME;
 
             var gameScene = new GAME.SCENES.GameScene(this, parameters._gameParameters, parameters._mapParameters);
             this._scenes["GAME"] = gameScene;
+
+            var animalScene = new GAME.SCENES.AnimalScene(this);
+            this._scenes["ANIMAL"] = gameScene;
         };
 
         GameWorld.prototype.extendCanvas = function (fullify) {
@@ -696,6 +707,9 @@ var GAME;
                 case 2 /* GAME */:
                     this._scene = this._scenes["GAME"].BuildScene();
                     break;
+                case 3 /* ANIMAL */:
+                    this._scene = this._scenes["ANIMAL"].BuildScene();
+                    break;
             }
 
             this._scene.registerBeforeRender(function () {
@@ -717,6 +731,7 @@ var GAME;
         Scenes[Scenes["TEST"] = 0] = "TEST";
         Scenes[Scenes["MAIN"] = 1] = "MAIN";
         Scenes[Scenes["GAME"] = 2] = "GAME";
+        Scenes[Scenes["ANIMAL"] = 3] = "ANIMAL";
     })(GAME.Scenes || (GAME.Scenes = {}));
     var Scenes = GAME.Scenes;
     ;
@@ -725,6 +740,34 @@ var GAME;
 /// <reference path="Scenes/TestScene.ts" />
 /// <reference path="Scenes/GameScene.ts" />
 /// <reference path="GameWorld.ts" />
+/// <reference path="SceneBuilder.ts" />
+var GAME;
+(function (GAME) {
+    (function (SCENES) {
+        var AnimalScene = (function (_super) {
+            __extends(AnimalScene, _super);
+            function AnimalScene(gameWorld) {
+                _super.call(this, gameWorld);
+            }
+            AnimalScene.prototype.BuildSceneAround = function (scene) {
+                var torusKnot;
+
+                var light = new BABYLON.PointLight("light1", new BABYLON.Vector3(0, 10, 0), scene);
+
+                var camera = new BABYLON.ArcRotateCamera("Camera", 10, 20, 30, new BABYLON.Vector3(0, 0, 0), scene);
+                camera.attachControl(this._gameWorld._canvas);
+
+                scene.registerBeforeRender(function () {
+                });
+
+                return scene;
+            };
+            return AnimalScene;
+        })(GAME.SCENES.SceneBuilder);
+        SCENES.AnimalScene = AnimalScene;
+    })(GAME.SCENES || (GAME.SCENES = {}));
+    var SCENES = GAME.SCENES;
+})(GAME || (GAME = {}));
 var GUI = (function () {
     function GUI(gameWorld) {
         if (typeof gameWorld !== 'undefined') {
@@ -752,7 +795,7 @@ var GUI = (function () {
         this._gui = new dat.GUI();
 
         var sceneFolder = this._gui.addFolder("Scenes");
-        sceneFolder.add(this.properties, "_sceneId", { "Test": 0 /* TEST */, "Game": 2 /* GAME */ }).name("Scene").onChange(function (x) {
+        sceneFolder.add(this.properties, "_sceneId", { "Test": 0 /* TEST */, "Game": 2 /* GAME */, "Animals": 3 /* ANIMAL */ }).name("Scene").onChange(function (x) {
             return _this.properties._sceneId = +x;
         });
         sceneFolder.open();
@@ -1191,10 +1234,12 @@ var TERRAIN;
         TerrainGenerator.prototype.GenerateWrappingMesh = function (mesh, scene) {
             var vertices = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
             var bbox = mesh.getBoundingInfo();
-            var xMin = -bbox.minimum.x;
-            var xMax = -xMin;
-            var zMin = -bbox.minimum.z;
-            var zMax = -zMin;
+            var xMin = bbox.minimum.x;
+            var xMax = bbox.maximum.x;
+            var zMin = bbox.minimum.z;
+            var zMax = bbox.maximum.z;
+            var yMin = bbox.minimum.y;
+            var yMax = bbox.maximum.y;
             var checkTriadIsOnXEdge = function (x, y, z) {
                 if (x == xMin || x == xMax)
                     return true;
@@ -1205,42 +1250,42 @@ var TERRAIN;
                     return true;
                 return false;
             };
-            var wrappingPoints = [];
+
+            var xLeft = [];
+            var xRight = [];
+            var zTop = [];
+            var zBottom = [];
+            var actualBottomShift = 0;
+            var maxDistance = Math.sqrt(xMin * xMin + zMin * zMin);
             for (var i = 0; i < vertices.length; i += 3) {
                 var x = vertices[i];
                 var y = vertices[i + 1];
                 var z = vertices[i + 2];
+                var d = Math.sqrt(x * x + z * z);
                 if (checkTriadIsOnXEdge(x, y, z)) {
-                    wrappingPoints.push(x, y, z);
-                    wrappingPoints.push(x, 0, z);
+                    if (x == xMin)
+                        xLeft.push(x, y, z, x, -70 - Math.floor(100 * maxDistance / d) + (Math.random() * 20), z);
+                    else
+                        xRight.unshift(x, y, z, x, -70 - Math.floor(100 * maxDistance / d) + (Math.random() * 20), z);
                 } else if (checkTriadIsOnZEdge(x, y, z)) {
-                    wrappingPoints.unshift(x, 0, z);
-                    wrappingPoints.unshift(x, y, z);
+                    if (z == zMin)
+                        zBottom.push(x, y, z, x, -70 - Math.floor(100 * maxDistance / d) + (Math.random() * 20), z);
+                    else
+                        zTop.unshift(x, y, z, x, -70 - Math.floor(100 * maxDistance / d) + (Math.random() * 20), z);
                 }
-                // Z edges will be first half, X edges will be second half
+            }
+            var wrappingPoints = xRight.concat(zTop, xLeft, zBottom);
+            var wrappingUvs = [];
+            var uvxprog = 1 / (wrappingPoints.length / 6);
+            for (var i = 0; i < wrappingPoints.length / 3; i += 2) {
+                wrappingUvs.push(uvxprog * i, wrappingPoints[3 * i + 1] / yMax, uvxprog * i, 0);
             }
 
             var wrappingIndices = [];
             var triplets = wrappingPoints.length / 3;
-            for (var i = 0; i < (triplets / 2 - 4); i += 2) {
-                if (Math.abs(i - triplets / 4 + 2) < 4)
-                    continue;
-                else if (i < triplets / 4) {
-                    wrappingIndices.push(i, (i + 2), (i + 3));
-                    wrappingIndices.push(i, (i + 3), (i + 1));
-                } else {
-                    wrappingIndices.push(i, (i + 3), (i + 2));
-                    wrappingIndices.push(i, (i + 1), (i + 3));
-                }
-            }
-            console.log(wrappingIndices);
-            var offset = triplets / 2;
-            for (var i = offset; i < triplets - 6; i += 2) {
-                wrappingIndices.push(i, i + 1, i + 5);
-                wrappingIndices.push(i, i + 5, i + 4);
-                i += 2;
-                wrappingIndices.push(i, i + 5, i + 1);
-                wrappingIndices.push(i, i + 4, i + 5);
+            for (var i = 0; i < triplets; i += 2) {
+                wrappingIndices.push(i, (i + 1) % triplets, (i + 3) % triplets);
+                wrappingIndices.push((i + 2) % triplets, i, (i + 3) % triplets);
             }
 
             var wrappingNormals = [];
@@ -1250,6 +1295,7 @@ var TERRAIN;
             vertexData.indices = wrappingIndices;
             vertexData.positions = wrappingPoints;
             vertexData.normals = wrappingNormals;
+            vertexData.uvs = wrappingUvs;
             var wrappingMesh = new BABYLON.Mesh("wrapper", scene);
             vertexData.applyToMesh(wrappingMesh, false);
 

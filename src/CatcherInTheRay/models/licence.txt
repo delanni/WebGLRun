@@ -1,0 +1,7 @@
+These models were taken from the project "3 dreams of black"
+
+You can look up the source and the project at: 
+http://www.ro.me
+https://github.com/dataarts/3-dreams-of-black
+
+The models were noted under a CC license, thus remixing and reusing for non-commercial use is allowed.

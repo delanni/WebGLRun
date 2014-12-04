@@ -115,7 +115,8 @@
                 mountainSideMaterial.specularPower = 0;
                 mountainSideMaterial.specularColor = BABYLON.Color3.FromInts(0, 0, 0);
                 mountainSideMaterial.diffuseColor = new BABYLON.Color3(0.43, 0.29, 0.03);
-                //mountainSideMaterial.diffuseTexture = new BABYLON.Texture("assets/normalmap.jpg", scene);
+                // source: https://elliptic-games.com/images/Milestone1-2.jpg
+                mountainSideMaterial.bumpTexture = new BABYLON.Texture("assets/noisenormals.jpg", scene);
 
                 // Put start and end
                 var startOrb = BABYLON.Mesh.CreateSphere("startOrb", 30, 30, scene, true);
@@ -127,6 +128,13 @@
 
                 startOrb.position = new BABYLON.Vector3(this._mapParams.pathTopOffset - this._mapParams.width / 2, 20, this._mapParams.height / 2 - 10);
                 endOrb.position = new BABYLON.Vector3(this._mapParams.pathBottomOffset - this._mapParams.width / 2, 20, this._mapParams.height / -2 + 10);
+
+                //window.addEventListener("click", function () {
+                //    // We try to pick an object
+                //    var pickResult = scene.pick(scene.pointerX, scene.pointerY);
+                //    console.log(pickResult);
+                //    pickResult.pickedMesh.material.wireframe = !pickResult.pickedMesh.material.wireframe;
+                //});
 
 
                 return scene;
