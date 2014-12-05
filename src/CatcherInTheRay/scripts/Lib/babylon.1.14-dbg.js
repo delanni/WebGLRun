@@ -14980,6 +14980,14 @@ var BABYLON;
             return this._keys;
         };
 
+        Animation.prototype.arrayInterpolateFunction = function (startValues, endValues, gradient) {
+            var mid = new Array(startValues.length);
+            for (var i = 0; i < startValues.length; i++) {
+                mid[i] = startValues[i] + (endValues[i] - startValues[i]) * gradient;
+            }
+            return mid;
+        };
+
         Animation.prototype.floatInterpolateFunction = function (startValue, endValue, gradient) {
             return startValue + (endValue - startValue) * gradient;
         };
@@ -15020,10 +15028,14 @@ var BABYLON;
             for (var key = 0; key < this._keys.length; key++) {
                 if (this._keys[key + 1].frame >= currentFrame) {
                     var startValue = this._keys[key].value;
-                    var endValue = this._keys[key + 1].value;
+                    var endValue = this._keys[(key + 1)].value;
                     var gradient = (currentFrame - this._keys[key].frame) / (this._keys[key + 1].frame - this._keys[key].frame);
 
                     switch (this.dataType) {
+                        case 6:
+                            return this.arrayInterpolateFunction(startValue, endValue, gradient);
+                            break;
+
                         case Animation.ANIMATIONTYPE_FLOAT:
                             switch (loopMode) {
                                 case Animation.ANIMATIONLOOPMODE_CYCLE:
@@ -18273,6 +18285,9 @@ var BABYLON;
                 var data;
 
                 switch (dataType) {
+                    case 6: // for ANIMATIONTYPE_FLOATARRAY
+                        data = key.values;
+                        break;
                     case BABYLON.Animation.ANIMATIONTYPE_FLOAT:
                         data = key.values[0];
                         break;

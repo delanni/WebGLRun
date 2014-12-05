@@ -1,0 +1,1 @@
+call animal.bat wolf

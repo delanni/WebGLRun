@@ -16,6 +16,8 @@
     <IISExpressUseClassicPipelineMode />
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="assets\noisenormals.jpg" />
+    <Content Include="assets\rockynoisenormals.jpg" />
     <Content Include="assets\Skybox\skyrender0001 - Copy.png" />
     <Content Include="assets\Skybox\skyrender0001.png" />
     <Content Include="assets\Skybox\skyrender0002 - Copy.png" />
@@ -28,18 +30,23 @@
     <Content Include="assets\Skybox\skyrender0005.png" />
     <Content Include="assets\Skybox\skyrender0006 - Copy.png" />
     <Content Include="assets\Skybox\skyrender0006.png" />
+    <Content Include="assets\sources.txt" />
     <Content Include="css\main.css" />
     <Content Include="index.html" />
-    <Content Include="models\box.js" />
-    <Content Include="models\cov_2.js" />
-    <Content Include="models\cow.js" />
-    <Content Include="models\elk.js" />
-    <Content Include="models\fox.js" />
-    <Content Include="models\fox.js.txt" />
-    <Content Include="models\modelToBabylon.js" />
-    <Content Include="models\moose.js" />
-    <Content Include="models\wolf.js" />
-    <Content Include="models\wolf_fox.js" />
+    <Content Include="models\bear.babylon.js" />
+    <Content Include="models\fox.babylon.js" />
+    <Content Include="models\licence.txt" />
+    <Content Include="models\mountainlion.babylon.js" />
+    <Content Include="models\raccoon.babylon.js" />
+    <Content Include="models\retreiver.babylon.js" />
+    <Content Include="models\scripts\licence.txt" />
+    <Content Include="models\scripts\meshMetaToBabylon.js" />
+    <Content Include="models\scripts\OBJExporter.js" />
+    <Content Include="models\scripts\objFaceExtractor.js" />
+    <Content Include="models\scripts\three.js" />
+    <Content Include="models\scripts\threeAnimationSplitter.js" />
+    <Content Include="models\scripts\threeToObj.js" />
+    <Content Include="models\wolf.babylon.js" />
     <Content Include="scripts\Lib\babylon.1.11.js" />
     <Content Include="scripts\Lib\babylon.1.12.js" />
     <Content Include="scripts\Lib\babylon.1.13.js" />
@@ -47,13 +54,17 @@
     <Content Include="scripts\Lib\cannon.js" />
     <Content Include="scripts\Lib\dat.gui.js" />
     <Content Include="scripts\Lib\oimo.js" />
+    <Content Include="scripts\Lib\ourOwnBabylon.js" />
     <Content Include="scripts\Lib\StackBlur.js" />
+    <Content Include="scripts\Shaders\color.fragment.fx" />
+    <Content Include="scripts\Shaders\color.vertex.fx" />
+    <Content Include="scripts\Shaders\flat.fragment.fx" />
+    <Content Include="scripts\Shaders\flat.vertex.fx" />
     <Content Include="web.config">
       <SubType>Designer</SubType>
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="models\fox.babylon" />
     <Content Include="models\models.zip" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>

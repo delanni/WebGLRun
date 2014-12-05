@@ -57,14 +57,22 @@ module GAME {
         }
 
         buildScenes(parameters: GameProperties) {
-            var testScene = new SCENES.TestScene(this);
-            this._scenes["TEST"] = testScene;
-
-            var gameScene = new SCENES.GameScene(this, parameters._gameParameters, parameters._mapParameters);
-            this._scenes["GAME"] = gameScene;
-
-            var animalScene = new SCENES.AnimalScene(this);
-            this._scenes["ANIMAL"] = gameScene;
+            switch (parameters._sceneId){
+                case Scenes.TEST: 
+                    var testScene = new SCENES.TestScene(this);
+                    this._scenes["TEST"] = testScene;
+                    break;
+                
+                case Scenes.GAME:
+                    var gameScene = new SCENES.GameScene(this,
+                        parameters._gameParameters, parameters._mapParameters);
+                    this._scenes["GAME"] = gameScene;
+                    break;
+                case Scenes.ANIMAL:
+                    var animalScene = new SCENES.AnimalScene(this);
+                    this._scenes["ANIMAL"] = animalScene;
+                    break;
+            }
         }
 
         extendCanvas(fullify: FullifyStates) {

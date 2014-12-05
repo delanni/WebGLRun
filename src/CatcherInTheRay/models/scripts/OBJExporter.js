@@ -14,8 +14,7 @@ THREE.OBJExporter.prototype = {
 
 		for ( var i = 0, l = geometry.vertices.length; i < l; i ++ ) {
 			var vertex = geometry.vertices[ i ];
-			var color = geometry.morphColors[0].colors[i];
-			output += 'v ' + vertex.x + ' ' + vertex.y + ' ' + vertex.z + ' ' + color.r + ' ' + color.g + ' ' + color.b + '\n';
+			output += 'v ' + vertex.x + ' ' + vertex.y + ' ' + vertex.z + '\n';
 		}
 
 		// uvs
@@ -56,12 +55,14 @@ THREE.OBJExporter.prototype = {
 
 		for ( var i = 0, j = 1, l = geometry.faces.length; i < l; i ++, j += 3 ) {
 
+			var color = geometry.morphColors[0].colors[i].getHex();
+
 			var face = geometry.faces[ i ];
 
 			output += 'f ';
-			output += ( face.a + 1 ) + '/' + ( j ) + '/' + ( j ) + ' ';
-			output += ( face.b + 1 ) + '/' + ( j + 1 ) + '/' + ( j + 1 ) + ' ';
-			output += ( face.c + 1 ) + '/' + ( j + 2 ) + '/' + ( j + 2 );
+			output += ( face.a + 1 ) + '/' + color + '/' + ( j ) + ' ';
+			output += ( face.b + 1 ) + '/' + color + '/' + ( j + 1 ) + ' ';
+			output += ( face.c + 1 ) + '/' + color + '/' + ( j + 2 );
 			output +='\n';
 
 		}

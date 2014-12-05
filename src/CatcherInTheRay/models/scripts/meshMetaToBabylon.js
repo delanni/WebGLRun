@@ -48,7 +48,7 @@ var normals = firstObject.normals;
 
 var material = null;
 var ambient = [0,0,0];
-var diffuse = [0,0,0];
+var diffuse = [0.8,0.8,0.8];
 var specular = [0,0,0];
 var specPower = 0;
 var alpha = 1;
@@ -57,19 +57,21 @@ var animations = [];
 var animName = id+"_anim";
 
 var animationKeys = [];
-animationKeys.push({"frame": i, "values": firstObject.vertices});
 for(var i=0;i<fileList.length;i++){
 	var fileName = fileList[i];
 	var frameObject = JSON.parse(fs.readFileSync(fileName));
 	var frame = {
-	    "frame": i+1,
+	    "frame": i,
 	    "values": frameObject.vertices
 	};
 	animationKeys.push(frame);
 }
+animationKeys.push({
+     "frame": animationKeys.length,
+     "values": firstObject.vertices});
 
 var anim = {
-    "dataType": 0,
+    "dataType": 6,
     "framePerSecond": 1,
     "loopBehavior": 1,
     "name": animName,

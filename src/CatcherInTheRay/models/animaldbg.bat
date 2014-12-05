@@ -23,7 +23,6 @@ rem # this outputs the final file: %1.babylon
 
 copy %1.babylon ..\%1.babylon
 cd..
-rmdir %1 /S /Q
 
-echo %1 completed!
-
+echo completed!
+pause
