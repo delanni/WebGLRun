@@ -110,6 +110,7 @@ declare module GAME {
         interface GameParameters {
             randomSeed: number;
             random: IRandomProvider;
+            character: string;
             debug?: boolean;
             useFlatShading?: boolean;
         }
@@ -119,6 +120,7 @@ declare module GAME {
             public _useFlatShading: boolean;
             public _mapParams: TERRAIN.HeightMapGeneratorParams;
             public _physicsEngine: BABYLON.OimoJSPlugin;
+            public _character: string;
             public _flatShader: BABYLON.ShaderMaterial;
             public mainCamera: BABYLON.FollowCamera;
             public followPlayer: boolean;
@@ -180,10 +182,11 @@ declare module GAME {
         speed: number;
         repeat: boolean;
     }
-    interface ICharacterAnimationDictionary {
+    interface ICharacterModelDictionary {
         RUN: ICharaceterAnimationProperties;
         STAY: ICharaceterAnimationProperties;
         JUMP: ICharaceterAnimationProperties;
+        ScalingVector: BABYLON.Vector3;
     }
     class Player {
         public INTERSECTION_TRESHOLD: number;
@@ -205,7 +208,7 @@ declare module GAME {
         public _keys: any;
         public _landTime: number;
         public CurrentRotation: number;
-        public animationProperties: ICharacterAnimationDictionary;
+        public modelProperties: ICharacterModelDictionary;
         public currentAnimation: BABYLON.Animatable;
         public currentAnimationName: string;
         public rotationMatrix: BABYLON.Matrix;

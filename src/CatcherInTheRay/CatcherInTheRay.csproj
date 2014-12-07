@@ -39,9 +39,6 @@
     <Content Include="models\tarbuffaloA.babylon" />
     <Content Include="models\vulture.babylon" />
     <Content Include="models\wolf.babylon" />
-    <Content Include="scripts\Lib\babylon.1.11.js" />
-    <Content Include="scripts\Lib\babylon.1.12.js" />
-    <Content Include="scripts\Lib\babylon.1.13.js" />
     <Content Include="scripts\Lib\babylon.1.14-dbg.js" />
     <Content Include="scripts\Lib\cannon.js" />
     <Content Include="scripts\Lib\dat.gui.js" />

@@ -16,7 +16,8 @@ module GAME {
             _gameParameters: {
                 randomSeed: 111,
                 random: this.random,
-                useFlatShading: false
+                useFlatShading: false,
+                character: "fox"
             },
             _mapParameters: {
                 destructionLevel: 13,
@@ -205,4 +206,5 @@ module GAME {
         ANIMAL = 3,
         TERRAINGEN = 4
     };
+
 }

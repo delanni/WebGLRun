@@ -6,13 +6,14 @@
         repeat: boolean;
     }
 
-    export interface ICharacterAnimationDictionary {
+    export interface ICharacterModelDictionary {
         RUN: ICharaceterAnimationProperties;
         STAY: ICharaceterAnimationProperties;
         JUMP: ICharaceterAnimationProperties;
+        ScalingVector: BABYLON.Vector3;
     }
 
-    var MODEL_ANIMATIONS: { [modelName: string]: ICharacterAnimationDictionary; } = {
+    var MODEL_ANIMATIONS: { [modelName: string]: ICharacterModelDictionary; } = {
         "fox": {
             RUN: {
                 start: 1, end: 11, speed: 12, repeat: true
@@ -22,18 +23,92 @@
             },
             JUMP: {
                 start: 5, end: 9, speed: 16, repeat: false
-            }
+            },
+            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
         },
         "wolf": {
             RUN: {
-                start: 1, end: 14, speed: 12, repeat: true
+                start: 1, end: 14, speed: 14, repeat: true
             },
             STAY: {
-                start: 0, end: 0, speed: 1, repeat: false
+                start: 0, end: 1, speed: 0, repeat: false
             },
             JUMP: {
-                start: 5, end: 11, speed: 12, repeat: false
-            }
+                start: 5, end: 11, speed: 14, repeat: false
+            },
+            ScalingVector: BABYLON.Vector3.FromArray([0.10, 0.10, 0.10])
+        },
+        "moose": {
+            RUN: {
+                start: 1, end: 15, speed: 12, repeat: true
+            },
+            STAY: {
+                start: 0, end: 1, speed: 0, repeat: false
+            },
+            JUMP: {
+                start: 7, end: 11, speed: 14, repeat: false
+            },
+            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
+        },
+        "deer": {
+            RUN: {
+                start: 1, end: 16, speed: 16, repeat: true
+            },
+            STAY: {
+                start: 0, end: 1, speed: 0, repeat: false
+            },
+            JUMP: {
+                start: 1, end: 11, speed: 14, repeat: false
+            },
+            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
+        },
+        "elk": {
+            RUN: {
+                start: 1, end: 15, speed: 12, repeat: true
+            },
+            STAY: {
+                start: 0, end: 1, speed: 0, repeat: false
+            },
+            JUMP: {
+                start: 1, end: 4, speed: 14, repeat: false
+            },
+            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
+        },
+        "mountainlion": {
+            RUN: {
+                start: 1, end: 13, speed: 12, repeat: true
+            },
+            STAY: {
+                start: 0, end: 1, speed: 0, repeat: false
+            },
+            JUMP: {
+                start: 1, end: 5, speed: 14, repeat: false
+            },
+            ScalingVector: BABYLON.Vector3.FromArray([0.15, 0.15, 0.15])
+        },
+        "chowchow": {
+            RUN: {
+                start: 1, end: 13, speed: 12, repeat: true
+            },
+            STAY: {
+                start: 0, end: 1, speed: 0, repeat: false
+            },
+            JUMP: {
+                start: 5, end: 10, speed: 14, repeat: false
+            },
+            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
+        },
+        "goldenRetreiver": {
+            RUN: {
+                start: 1, end: 12, speed: 12, repeat: true
+            },
+            STAY: {
+                start: 0, end: 1, speed: 0, repeat: false
+            },
+            JUMP: {
+                start: 2, end: 7, speed: 14, repeat: false
+            },
+            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
         }
     }
 
@@ -60,7 +135,7 @@
         _landTime: number = 0;
         CurrentRotation: number = 0;
 
-        animationProperties: ICharacterAnimationDictionary;
+        modelProperties: ICharacterModelDictionary;
         currentAnimation: BABYLON.Animatable;
         currentAnimationName: string;
 
@@ -77,11 +152,12 @@
 
 
             // animation stuff
-            this.animationProperties = MODEL_ANIMATIONS[this._mesh.id];
+            this.modelProperties = MODEL_ANIMATIONS[this._mesh.id];
             this._animationObject = this._mesh.animations[0];
             Cast<any>(this._mesh).__defineSetter__("vertexData", (val) => {
                 this._mesh.setVerticesData("position", val);
             });
+            this._mesh.scaling = this.modelProperties.ScalingVector;
 
             //debug
             Cast<any>(this._mesh).player = this;
@@ -149,7 +225,7 @@
 
         public Jump(power: number) {
             if (Date.now() - this._landTime < this.LAND_COOLDOWN) return;
-            this.velocity.y = (this.BASE_JUMP_POW);
+            this.velocity.y = (this.BASE_JUMP_POW * power);
             this._parent.position.y += 1.5;
             this.startAnimation("JUMP");
             this.isOnGround = false;
@@ -188,6 +264,11 @@
             if (this._keys[32] > 0) {
                 if (this.isOnGround) {
                     this.Jump(1);
+                    delete this._keys[32];
+                } else if (Date.now() - this._landTime > 3000) {
+                    // unstuck
+                    this._landTime = Date.now();
+                    this.Jump(1.5);
                     delete this._keys[32];
                 }
             }
@@ -240,13 +321,13 @@
             }
         }
 
-        private startAnimation(animationKey: string, force?:boolean) {
+        private startAnimation(animationKey: string, force?: boolean) {
             if (this.currentAnimationName == animationKey && !force) return;
             if (this.currentAnimationName == "JUMP") return;
 
             this.stopAnimation();
 
-            var animationProps = Cast<ICharaceterAnimationProperties>(this.animationProperties[animationKey]);
+            var animationProps = Cast<ICharaceterAnimationProperties>(this.modelProperties[animationKey]);
             this.currentAnimation = this._scene.beginAnimation(
                 this._mesh, animationProps.start, animationProps.end, animationProps.repeat, animationProps.speed);
             this.currentAnimationName = animationKey;

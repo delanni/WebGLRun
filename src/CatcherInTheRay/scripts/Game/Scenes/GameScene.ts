@@ -3,6 +3,7 @@
         export interface GameParameters {
             randomSeed: number;
             random: IRandomProvider;
+            character: string;
             debug?: boolean;
             useFlatShading?: boolean;
         }
@@ -13,7 +14,7 @@
             _useFlatShading: boolean;
             _mapParams: TERRAIN.HeightMapGeneratorParams;
             _physicsEngine: BABYLON.OimoJSPlugin;
-
+            _character: string;
             _flatShader: BABYLON.ShaderMaterial;
 
             mainCamera: BABYLON.FollowCamera;
@@ -29,6 +30,7 @@
                 this._randomSeed = parameters.randomSeed;
                 this._debug = parameters.debug || true;
                 this._useFlatShading = parameters.useFlatShading;
+                this._character = parameters.character;
                 this._mapParams = mapParameters;
 
                 this.followPlayer = true;
@@ -159,7 +161,6 @@
                 BABYLON.SceneLoader.ImportMesh([meshName], "models/", meshName+".babylon", scene, x=> {
                     playerMesh = Cast<BABYLON.Mesh>(x[0]);
                     playerMesh.material = this._flatShader;
-                    playerMesh.scaling = new BABYLON.Vector3(0.25, 0.25, 0.25);
                     playerMesh.position = new BABYLON.Vector3(0, -5, 0);
                     playerMesh.rotate(BABYLON.Axis.Y, Math.PI, BABYLON.Space.LOCAL);
 
@@ -217,7 +218,7 @@
                 this._flatShader = flatShader;
             }
 
-            BuildSceneAround(scene: BABYLON.Scene): BABYLON.Scene {
+            public BuildSceneAround(scene: BABYLON.Scene): BABYLON.Scene {
 
                 //this._physicsEngine = new BABYLON.OimoJSPlugin();
                 //scene.enablePhysics(new BABYLON.Vector3(0, -10, 0), this._physicsEngine );
@@ -232,7 +233,7 @@
 
                 this.putStartAndEnd(scene);
 
-                this.createPlayer(scene, "wolf");
+                this.createPlayer(scene, this._character);
 
                 //window.addEventListener("click", function () {
                 //    // We try to pick an object

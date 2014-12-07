@@ -59,6 +59,8 @@ class GUI {
         var gameFolder = this._gui.addFolder("Game properties");
         var flatShadingCtr = gameFolder.add(this.properties._gameParameters, "useFlatShading").name("Use flat shading");
         var randomSeedCtr = gameFolder.add(this.properties._gameParameters, "randomSeed").name("Random seed").min(0).max(2000).step(1);
+        var characterCtr = gameFolder.add(this.properties._gameParameters, "character",
+            ["fox", "wolf","deer", "elk", "mountainlion", "chowchow", "goldenRetreiver", "moose"]).name("Character").onChange((x) => this.properties._gameParameters.character = x);
         gameFolder.open();
 
         var terrainGenFolder = this._gui.addFolder("Terrain and landscape");

@@ -428,6 +428,7 @@ var GAME;
                 this._randomSeed = parameters.randomSeed;
                 this._debug = parameters.debug || true;
                 this._useFlatShading = parameters.useFlatShading;
+                this._character = parameters.character;
                 this._mapParams = mapParameters;
 
                 this.followPlayer = true;
@@ -554,7 +555,6 @@ var GAME;
                 BABYLON.SceneLoader.ImportMesh([meshName], "models/", meshName + ".babylon", scene, function (x) {
                     playerMesh = Cast(x[0]);
                     playerMesh.material = _this._flatShader;
-                    playerMesh.scaling = new BABYLON.Vector3(0.25, 0.25, 0.25);
                     playerMesh.position = new BABYLON.Vector3(0, -5, 0);
                     playerMesh.rotate(BABYLON.Axis.Y, Math.PI, 0 /* LOCAL */);
 
@@ -625,7 +625,7 @@ var GAME;
 
                 this.putStartAndEnd(scene);
 
-                this.createPlayer(scene, "wolf");
+                this.createPlayer(scene, this._character);
 
                 //window.addEventListener("click", function () {
                 //    // We try to pick an object
@@ -653,7 +653,8 @@ var GAME;
                 _gameParameters: {
                     randomSeed: 111,
                     random: this.random,
-                    useFlatShading: false
+                    useFlatShading: false,
+                    character: "fox"
                 },
                 _mapParameters: {
                     destructionLevel: 13,
@@ -862,18 +863,92 @@ var GAME;
             },
             JUMP: {
                 start: 5, end: 9, speed: 16, repeat: false
-            }
+            },
+            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
         },
         "wolf": {
             RUN: {
-                start: 1, end: 14, speed: 12, repeat: true
+                start: 1, end: 14, speed: 14, repeat: true
             },
             STAY: {
-                start: 0, end: 0, speed: 1, repeat: false
+                start: 0, end: 1, speed: 0, repeat: false
             },
             JUMP: {
-                start: 5, end: 11, speed: 12, repeat: false
-            }
+                start: 5, end: 11, speed: 14, repeat: false
+            },
+            ScalingVector: BABYLON.Vector3.FromArray([0.10, 0.10, 0.10])
+        },
+        "moose": {
+            RUN: {
+                start: 1, end: 15, speed: 12, repeat: true
+            },
+            STAY: {
+                start: 0, end: 1, speed: 0, repeat: false
+            },
+            JUMP: {
+                start: 7, end: 11, speed: 14, repeat: false
+            },
+            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
+        },
+        "deer": {
+            RUN: {
+                start: 1, end: 16, speed: 16, repeat: true
+            },
+            STAY: {
+                start: 0, end: 1, speed: 0, repeat: false
+            },
+            JUMP: {
+                start: 1, end: 11, speed: 14, repeat: false
+            },
+            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
+        },
+        "elk": {
+            RUN: {
+                start: 1, end: 15, speed: 12, repeat: true
+            },
+            STAY: {
+                start: 0, end: 1, speed: 0, repeat: false
+            },
+            JUMP: {
+                start: 1, end: 4, speed: 14, repeat: false
+            },
+            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
+        },
+        "mountainlion": {
+            RUN: {
+                start: 1, end: 13, speed: 12, repeat: true
+            },
+            STAY: {
+                start: 0, end: 1, speed: 0, repeat: false
+            },
+            JUMP: {
+                start: 1, end: 5, speed: 14, repeat: false
+            },
+            ScalingVector: BABYLON.Vector3.FromArray([0.15, 0.15, 0.15])
+        },
+        "chowchow": {
+            RUN: {
+                start: 1, end: 13, speed: 12, repeat: true
+            },
+            STAY: {
+                start: 0, end: 1, speed: 0, repeat: false
+            },
+            JUMP: {
+                start: 5, end: 10, speed: 14, repeat: false
+            },
+            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
+        },
+        "goldenRetreiver": {
+            RUN: {
+                start: 1, end: 12, speed: 12, repeat: true
+            },
+            STAY: {
+                start: 0, end: 1, speed: 0, repeat: false
+            },
+            JUMP: {
+                start: 2, end: 7, speed: 14, repeat: false
+            },
+            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
         }
     };
 
@@ -898,11 +973,12 @@ var GAME;
             this._parent = Cast(mesh.parent);
 
             // animation stuff
-            this.animationProperties = MODEL_ANIMATIONS[this._mesh.id];
+            this.modelProperties = MODEL_ANIMATIONS[this._mesh.id];
             this._animationObject = this._mesh.animations[0];
             Cast(this._mesh).__defineSetter__("vertexData", function (val) {
                 _this._mesh.setVerticesData("position", val);
             });
+            this._mesh.scaling = this.modelProperties.ScalingVector;
 
             //debug
             Cast(this._mesh).player = this;
@@ -970,7 +1046,7 @@ var GAME;
         Player.prototype.Jump = function (power) {
             if (Date.now() - this._landTime < this.LAND_COOLDOWN)
                 return;
-            this.velocity.y = (this.BASE_JUMP_POW);
+            this.velocity.y = (this.BASE_JUMP_POW * power);
             this._parent.position.y += 1.5;
             this.startAnimation("JUMP");
             this.isOnGround = false;
@@ -1008,6 +1084,11 @@ var GAME;
             if (this._keys[32] > 0) {
                 if (this.isOnGround) {
                     this.Jump(1);
+                    delete this._keys[32];
+                } else if (Date.now() - this._landTime > 3000) {
+                    // unstuck
+                    this._landTime = Date.now();
+                    this.Jump(1.5);
                     delete this._keys[32];
                 }
             }
@@ -1072,7 +1153,7 @@ var GAME;
 
             this.stopAnimation();
 
-            var animationProps = Cast(this.animationProperties[animationKey]);
+            var animationProps = Cast(this.modelProperties[animationKey]);
             this.currentAnimation = this._scene.beginAnimation(this._mesh, animationProps.start, animationProps.end, animationProps.repeat, animationProps.speed);
             this.currentAnimationName = animationKey;
         };
@@ -1138,7 +1219,7 @@ var GAME;
                     'tarbuffaloA',
                     'vulture',
                     'wolf',
-                    'goldenretreiver'];
+                    'goldenRetreiver'];
                 var loader = BABYLON.SceneLoader;
 
                 for (var i = 0; i < animalNames.length; i++) {
@@ -1395,6 +1476,9 @@ var GUI = (function () {
         var gameFolder = this._gui.addFolder("Game properties");
         var flatShadingCtr = gameFolder.add(this.properties._gameParameters, "useFlatShading").name("Use flat shading");
         var randomSeedCtr = gameFolder.add(this.properties._gameParameters, "randomSeed").name("Random seed").min(0).max(2000).step(1);
+        var characterCtr = gameFolder.add(this.properties._gameParameters, "character", ["fox", "wolf", "deer", "elk", "mountainlion", "chowchow", "goldenRetreiver", "moose"]).name("Character").onChange(function (x) {
+            return _this.properties._gameParameters.character = x;
+        });
         gameFolder.open();
 
         var terrainGenFolder = this._gui.addFolder("Terrain and landscape");

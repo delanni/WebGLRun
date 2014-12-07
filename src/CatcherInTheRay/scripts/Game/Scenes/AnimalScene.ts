@@ -48,7 +48,7 @@ module GAME {
                     'tarbuffaloA',
                     'vulture',
                     'wolf',
-                    'goldenretreiver' ];
+                    'goldenRetreiver' ];
                 var loader = BABYLON.SceneLoader;
 
                 for (var i = 0; i < animalNames.length; i++) {
