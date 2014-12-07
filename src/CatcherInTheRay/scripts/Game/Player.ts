@@ -1,15 +1,54 @@
 ﻿module GAME {
+    export interface ICharaceterAnimationProperties {
+        start: number;
+        end: number;
+        speed: number;
+        repeat: boolean;
+    }
+
+    export interface ICharacterAnimationDictionary {
+        RUN: ICharaceterAnimationProperties;
+        STAY: ICharaceterAnimationProperties;
+        JUMP: ICharaceterAnimationProperties;
+    }
+
+    var MODEL_ANIMATIONS: { [modelName: string]: ICharacterAnimationDictionary; } = {
+        "fox": {
+            RUN: {
+                start: 1, end: 11, speed: 12, repeat: true
+            },
+            STAY: {
+                start: 0, end: 1, speed: 0, repeat: false
+            },
+            JUMP: {
+                start: 5, end: 9, speed: 16, repeat: false
+            }
+        },
+        "wolf": {
+            RUN: {
+                start: 1, end: 14, speed: 12, repeat: true
+            },
+            STAY: {
+                start: 0, end: 0, speed: 1, repeat: false
+            },
+            JUMP: {
+                start: 5, end: 11, speed: 12, repeat: false
+            }
+        }
+    }
+
     export class Player {
         INTERSECTION_TRESHOLD: number = 4;
         BASE_ACCELERATION: number = 2;
-        BASE_JUMP_POW: number = 2;
-        LAND_COOLDOWN: number = 300;
+        BASE_JUMP_POW: number = 2.8;
+        LAND_COOLDOWN: number = 100;
         ROTATION_APPROXIMATOR: number = 4;
         MINVECTOR: BABYLON.Vector3 = new BABYLON.Vector3(-2, -10, -2);
         MAXVECTOR: BABYLON.Vector3 = new BABYLON.Vector3(2, 10, 2);
         GRAVITY: BABYLON.Vector3 = new BABYLON.Vector3(0, -0.15, 0);
 
         _mesh: BABYLON.Mesh;
+        _animationObject: BABYLON.Animation;
         _parent: BABYLON.Mesh;
         _scene: BABYLON.Scene;
         _bottomVector: BABYLON.Vector3;
@@ -17,9 +56,13 @@
         _ground: BABYLON.Mesh;
 
         _acceptedKeys: {} = { "32": 32, "87": 87, "68": 68, "83": 83, "65": 65 };
-        CurrentRotation: number = 0;
         _keys: any = { "32": 0, "87": 0, "68": 0, "83": 0, "65": 0 };
         _landTime: number = 0;
+        CurrentRotation: number = 0;
+
+        animationProperties: ICharacterAnimationDictionary;
+        currentAnimation: BABYLON.Animatable;
+        currentAnimationName: string;
 
         rotationMatrix: BABYLON.Matrix;
         velocity: BABYLON.Vector3;
@@ -31,6 +74,14 @@
             this._ground = ground;
             this._mesh = mesh;
             this._parent = Cast<BABYLON.Mesh>(mesh.parent);
+
+
+            // animation stuff
+            this.animationProperties = MODEL_ANIMATIONS[this._mesh.id];
+            this._animationObject = this._mesh.animations[0];
+            Cast<any>(this._mesh).__defineSetter__("vertexData", (val) => {
+                this._mesh.setVerticesData("position", val);
+            });
 
             //debug
             Cast<any>(this._mesh).player = this;
@@ -53,13 +104,13 @@
 
                 this._ray.origin = this._parent.position.add(this._bottomVector);
                 var intersection = this._ground.intersects(this._ray);
-                if (intersection.hit && intersection.distance < this.INTERSECTION_TRESHOLD) {
-
+                if (!this._keys[32] && intersection.hit && intersection.distance < this.INTERSECTION_TRESHOLD) {
                     this._parent.position.y = intersection.pickedPoint.y - this._bottomVector.y;
                     this.velocity.y = 0;
                     if (!this.isOnGround) {
                         this.isOnGround = true;
                         this._landTime = Date.now();
+                        this.stopAnimation();
                     }
                 } else {
                     this.velocity.addInPlace(this.GRAVITY);
@@ -84,7 +135,6 @@
                 if (evt.keyCode in this._acceptedKeys) {
                     if (this._keys[evt.keyCode] === 0) {
                         this._keys[evt.keyCode] = 1;
-                        this._activeKeys++;
                     }
                     evt.preventDefault();
                 }
@@ -92,52 +142,51 @@
             window.addEventListener("keyup", evt=> {
                 if (evt.keyCode in this._acceptedKeys) {
                     this._keys[evt.keyCode] = 0;
-                    this._activeKeys--;
-                    if (this._activeKeys == 0) {
-                        this._rotationOffset = this._lastRotationTarget;
-                    }
                     evt.preventDefault();
                 }
             });
         }
 
-        _activeKeys: number = 0;
-        _rotationOffset: number = 0;
-        _lastRotationTarget: number = 0;
-
         public Jump(power: number) {
             if (Date.now() - this._landTime < this.LAND_COOLDOWN) return;
             this.velocity.y = (this.BASE_JUMP_POW);
-            this._parent.position.y += 3;
+            this._parent.position.y += 1.5;
+            this.startAnimation("JUMP");
             this.isOnGround = false;
         }
 
         public Accelerate(factor: number) {
+            this.startAnimation("RUN");
             this.velocity.z -= (factor * this.BASE_ACCELERATION);
         }
 
         public RotateTo(targetRot: number) {
-            if (this.CurrentRotation == targetRot) return;
-            var diff = targetRot - this.CurrentRotation;
-            if (Math.abs(diff) > Math.PI) diff = diff - 2 * Math.PI;
-            if (Math.abs(diff) < Math.PI / 10) {
-                this._parent.rotate(BABYLON.Axis.Y, diff, BABYLON.Space.LOCAL);
-            } else {
-                diff /= this.ROTATION_APPROXIMATOR;
-                this._parent.rotate(BABYLON.Axis.Y, diff, BABYLON.Space.LOCAL);
+            if (this.CurrentRotation > Math.PI * 2) {
+                this.CurrentRotation -= Math.PI * 2;
+            } else if (this.CurrentRotation < -Math.PI * 2) {
+                this.CurrentRotation += Math.PI * 2;
             }
+            if (this.CurrentRotation == targetRot) return;
+
+            var diff = targetRot - this.CurrentRotation;
+            if (diff > Math.PI) {
+                diff -= Math.PI * 2;
+            } else if (diff < -Math.PI) {
+                diff += Math.PI * 2;
+            }
+
+            if (Math.abs(diff) > Math.PI / 10) {
+                diff /= this.ROTATION_APPROXIMATOR;
+            }
+            this._parent.rotate(BABYLON.Axis.Y, diff, BABYLON.Space.LOCAL);
             this.CurrentRotation += diff;
 
-            if (Math.abs(this.CurrentRotation) > Math.PI*2) {
-                this.CurrentRotation = this.CurrentRotation % (Math.PI*2);
-            }
         }
 
         private readKeys() {
 
             if (this._keys[32] > 0) {
                 if (this.isOnGround) {
-                    console.log("JUMPING");
                     this.Jump(1);
                     delete this._keys[32];
                 }
@@ -153,6 +202,7 @@
                 var result = (start.x + 1) * 10 + (start.y + 1);
                 switch (result) {
                     case 11: // do nothing
+                        this.startAnimation("STAY");
                         break;
                     case 21: // go -90deg -PI/2rad
                         this.Accelerate(1);
@@ -187,6 +237,26 @@
                         this.RotateTo(-Math.PI * 3 / 4);
                         break;
                 }
+            }
+        }
+
+        private startAnimation(animationKey: string, force?:boolean) {
+            if (this.currentAnimationName == animationKey && !force) return;
+            if (this.currentAnimationName == "JUMP") return;
+
+            this.stopAnimation();
+
+            var animationProps = Cast<ICharaceterAnimationProperties>(this.animationProperties[animationKey]);
+            this.currentAnimation = this._scene.beginAnimation(
+                this._mesh, animationProps.start, animationProps.end, animationProps.repeat, animationProps.speed);
+            this.currentAnimationName = animationKey;
+        }
+
+        private stopAnimation() {
+            if (this.currentAnimation) {
+                this.currentAnimation.stop();
+                delete this.currentAnimation;
+                delete this.currentAnimationName;
             }
         }
     }

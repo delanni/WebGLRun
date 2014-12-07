@@ -174,6 +174,17 @@ declare module GAME {
     }
 }
 declare module GAME {
+    interface ICharaceterAnimationProperties {
+        start: number;
+        end: number;
+        speed: number;
+        repeat: boolean;
+    }
+    interface ICharacterAnimationDictionary {
+        RUN: ICharaceterAnimationProperties;
+        STAY: ICharaceterAnimationProperties;
+        JUMP: ICharaceterAnimationProperties;
+    }
     class Player {
         public INTERSECTION_TRESHOLD: number;
         public BASE_ACCELERATION: number;
@@ -184,26 +195,29 @@ declare module GAME {
         public MAXVECTOR: BABYLON.Vector3;
         public GRAVITY: BABYLON.Vector3;
         public _mesh: BABYLON.Mesh;
+        public _animationObject: BABYLON.Animation;
         public _parent: BABYLON.Mesh;
         public _scene: BABYLON.Scene;
         public _bottomVector: BABYLON.Vector3;
         public _ray: BABYLON.Ray;
         public _ground: BABYLON.Mesh;
         public _acceptedKeys: {};
-        public CurrentRotation: number;
         public _keys: any;
         public _landTime: number;
+        public CurrentRotation: number;
+        public animationProperties: ICharacterAnimationDictionary;
+        public currentAnimation: BABYLON.Animatable;
+        public currentAnimationName: string;
         public rotationMatrix: BABYLON.Matrix;
         public velocity: BABYLON.Vector3;
         public isOnGround: boolean;
         constructor(mesh: BABYLON.Mesh, ground: BABYLON.Mesh, scene: BABYLON.Scene);
-        public _activeKeys: number;
-        public _rotationOffset: number;
-        public _lastRotationTarget: number;
         public Jump(power: number): void;
         public Accelerate(factor: number): void;
         public RotateTo(targetRot: number): void;
         private readKeys();
+        private startAnimation(animationKey, force?);
+        private stopAnimation();
     }
 }
 declare module GAME {

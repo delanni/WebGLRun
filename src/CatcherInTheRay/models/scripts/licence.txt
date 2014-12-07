@@ -1,5 +1,0 @@
-The three.js files are the part of the free THREE.JS 3d WebGL library.
-They were used for extracting three.js type models and recreating Babylon type models.
-
-http://threejs.org/
-https://github.com/mrdoob/three.js

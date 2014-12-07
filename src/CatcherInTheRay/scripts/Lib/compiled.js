@@ -459,7 +459,7 @@ var GAME;
                 // camera.attachControl(this._gameWorld._canvas);
                 // camera.maxZ = 10000;
                 // camera.speed = 8;
-                this.mainCamera = new BABYLON.FollowCamera("camera", new BABYLON.Vector3(0, 600, 0), scene);
+                this.mainCamera = new BABYLON.FollowCamera("camera", new BABYLON.Vector3(0, 1000, 0), scene);
                 this.mainCamera.maxZ = 10000;
                 this.mainCamera.speed = 8;
             };
@@ -557,19 +557,17 @@ var GAME;
                     playerMesh.scaling = new BABYLON.Vector3(0.25, 0.25, 0.25);
                     playerMesh.position = new BABYLON.Vector3(0, -5, 0);
                     playerMesh.rotate(BABYLON.Axis.Y, Math.PI, 0 /* LOCAL */);
+
                     var parent = BABYLON.Mesh.CreateSphere("colliderBox", 30, 2, scene, true);
-
-                    //var fakeKid = BABYLON.Mesh.CreateSphere("fakeKid", 30, 2, scene, false);
-                    //fakeKid.material = new BABYLON.StandardMaterial("fakeMat", scene);
-                    //fakeKid.material.wireframe = true;
+                    parent.isVisible = false;
                     parent.ellipsoid = new BABYLON.Vector3(5, 2.5, 15);
-
-                    //fakeKid.scaling = parent.ellipsoid;
-                    //fakeKid.showBoundingBox = true;
                     playerMesh.parent = parent;
-
-                    //fakeKid.parent = parent;
                     parent.position = _this.startOrb.position.clone();
+
+                    var cameraFollowTarget = BABYLON.Mesh.CreateSphere("fakeKid", 30, 2, scene, false);
+                    cameraFollowTarget.material = new BABYLON.StandardMaterial("fakeMat", scene);
+                    cameraFollowTarget.isVisible = false;
+                    cameraFollowTarget.position = parent.position.clone();
 
                     _this.player = new GAME.Player(playerMesh, _this.mountains, scene);
 
@@ -580,10 +578,13 @@ var GAME;
                             _this.mainCamera.rotationOffset = 0; // the viewing angle
                             _this.mainCamera.cameraAcceleration = 0.05; // how fast to move
                             _this.mainCamera.maxCameraSpeed = 4; // speed limit
-                            _this.mainCamera.target = parent;
-                            _this.mainCamera.setTarget(parent.position);
+                            _this.mainCamera.target = cameraFollowTarget;
+                            _this.mainCamera.setTarget(cameraFollowTarget.position);
                         } else if (_this.mainCamera.target) {
-                            _this.mainCamera.rotationOffset = UTILS.Utils.Clamp(_this.player.CurrentRotation / Math.PI * 180, -45, 45);
+                            var moveTarget = parent.position.subtract(cameraFollowTarget.position);
+                            moveTarget.scaleInPlace(0.15);
+                            cameraFollowTarget.position.addInPlace(moveTarget);
+                            _this.mainCamera.rotationOffset = UTILS.Utils.Clamp((_this.player.CurrentRotation % Math.PI) / Math.PI * 180, -45, 45);
                         }
                     });
                 });
@@ -624,7 +625,7 @@ var GAME;
 
                 this.putStartAndEnd(scene);
 
-                this.createPlayer(scene, "fox");
+                this.createPlayer(scene, "wolf");
 
                 //window.addEventListener("click", function () {
                 //    // We try to pick an object
@@ -851,28 +852,57 @@ var GAME;
 /// <reference path="GameWorld.ts" />
 var GAME;
 (function (GAME) {
+    var MODEL_ANIMATIONS = {
+        "fox": {
+            RUN: {
+                start: 1, end: 11, speed: 12, repeat: true
+            },
+            STAY: {
+                start: 0, end: 1, speed: 0, repeat: false
+            },
+            JUMP: {
+                start: 5, end: 9, speed: 16, repeat: false
+            }
+        },
+        "wolf": {
+            RUN: {
+                start: 1, end: 14, speed: 12, repeat: true
+            },
+            STAY: {
+                start: 0, end: 0, speed: 1, repeat: false
+            },
+            JUMP: {
+                start: 5, end: 11, speed: 12, repeat: false
+            }
+        }
+    };
+
     var Player = (function () {
         function Player(mesh, ground, scene) {
             var _this = this;
             this.INTERSECTION_TRESHOLD = 4;
             this.BASE_ACCELERATION = 2;
-            this.BASE_JUMP_POW = 2;
-            this.LAND_COOLDOWN = 300;
+            this.BASE_JUMP_POW = 2.8;
+            this.LAND_COOLDOWN = 100;
             this.ROTATION_APPROXIMATOR = 4;
             this.MINVECTOR = new BABYLON.Vector3(-2, -10, -2);
             this.MAXVECTOR = new BABYLON.Vector3(2, 10, 2);
             this.GRAVITY = new BABYLON.Vector3(0, -0.15, 0);
             this._acceptedKeys = { "32": 32, "87": 87, "68": 68, "83": 83, "65": 65 };
-            this.CurrentRotation = 0;
             this._keys = { "32": 0, "87": 0, "68": 0, "83": 0, "65": 0 };
             this._landTime = 0;
-            this._activeKeys = 0;
-            this._rotationOffset = 0;
-            this._lastRotationTarget = 0;
+            this.CurrentRotation = 0;
             this._scene = scene;
             this._ground = ground;
             this._mesh = mesh;
             this._parent = Cast(mesh.parent);
+
+            // animation stuff
+            this.animationProperties = MODEL_ANIMATIONS[this._mesh.id];
+            this._animationObject = this._mesh.animations[0];
+            Cast(this._mesh).__defineSetter__("vertexData", function (val) {
+                _this._mesh.setVerticesData("position", val);
+            });
 
             //debug
             Cast(this._mesh).player = this;
@@ -895,12 +925,13 @@ var GAME;
 
                 _this._ray.origin = _this._parent.position.add(_this._bottomVector);
                 var intersection = _this._ground.intersects(_this._ray);
-                if (intersection.hit && intersection.distance < _this.INTERSECTION_TRESHOLD) {
+                if (!_this._keys[32] && intersection.hit && intersection.distance < _this.INTERSECTION_TRESHOLD) {
                     _this._parent.position.y = intersection.pickedPoint.y - _this._bottomVector.y;
                     _this.velocity.y = 0;
                     if (!_this.isOnGround) {
                         _this.isOnGround = true;
                         _this._landTime = Date.now();
+                        _this.stopAnimation();
                     }
                 } else {
                     _this.velocity.addInPlace(_this.GRAVITY);
@@ -925,7 +956,6 @@ var GAME;
                 if (evt.keyCode in _this._acceptedKeys) {
                     if (_this._keys[evt.keyCode] === 0) {
                         _this._keys[evt.keyCode] = 1;
-                        _this._activeKeys++;
                     }
                     evt.preventDefault();
                 }
@@ -933,10 +963,6 @@ var GAME;
             window.addEventListener("keyup", function (evt) {
                 if (evt.keyCode in _this._acceptedKeys) {
                     _this._keys[evt.keyCode] = 0;
-                    _this._activeKeys--;
-                    if (_this._activeKeys == 0) {
-                        _this._rotationOffset = _this._lastRotationTarget;
-                    }
                     evt.preventDefault();
                 }
             });
@@ -945,37 +971,42 @@ var GAME;
             if (Date.now() - this._landTime < this.LAND_COOLDOWN)
                 return;
             this.velocity.y = (this.BASE_JUMP_POW);
-            this._parent.position.y += 3;
+            this._parent.position.y += 1.5;
+            this.startAnimation("JUMP");
             this.isOnGround = false;
         };
 
         Player.prototype.Accelerate = function (factor) {
+            this.startAnimation("RUN");
             this.velocity.z -= (factor * this.BASE_ACCELERATION);
         };
 
         Player.prototype.RotateTo = function (targetRot) {
+            if (this.CurrentRotation > Math.PI * 2) {
+                this.CurrentRotation -= Math.PI * 2;
+            } else if (this.CurrentRotation < -Math.PI * 2) {
+                this.CurrentRotation += Math.PI * 2;
+            }
             if (this.CurrentRotation == targetRot)
                 return;
-            var diff = targetRot - this.CurrentRotation;
-            if (Math.abs(diff) > Math.PI)
-                diff = diff - 2 * Math.PI;
-            if (Math.abs(diff) < Math.PI / 10) {
-                this._parent.rotate(BABYLON.Axis.Y, diff, 0 /* LOCAL */);
-            } else {
-                diff /= this.ROTATION_APPROXIMATOR;
-                this._parent.rotate(BABYLON.Axis.Y, diff, 0 /* LOCAL */);
-            }
-            this.CurrentRotation += diff;
 
-            if (Math.abs(this.CurrentRotation) > Math.PI * 2) {
-                this.CurrentRotation = this.CurrentRotation % (Math.PI * 2);
+            var diff = targetRot - this.CurrentRotation;
+            if (diff > Math.PI) {
+                diff -= Math.PI * 2;
+            } else if (diff < -Math.PI) {
+                diff += Math.PI * 2;
             }
+
+            if (Math.abs(diff) > Math.PI / 10) {
+                diff /= this.ROTATION_APPROXIMATOR;
+            }
+            this._parent.rotate(BABYLON.Axis.Y, diff, 0 /* LOCAL */);
+            this.CurrentRotation += diff;
         };
 
         Player.prototype.readKeys = function () {
             if (this._keys[32] > 0) {
                 if (this.isOnGround) {
-                    console.log("JUMPING");
                     this.Jump(1);
                     delete this._keys[32];
                 }
@@ -995,6 +1026,7 @@ var GAME;
                 var result = (start.x + 1) * 10 + (start.y + 1);
                 switch (result) {
                     case 11:
+                        this.startAnimation("STAY");
                         break;
                     case 21:
                         this.Accelerate(1);
@@ -1029,6 +1061,27 @@ var GAME;
                         this.RotateTo(-Math.PI * 3 / 4);
                         break;
                 }
+            }
+        };
+
+        Player.prototype.startAnimation = function (animationKey, force) {
+            if (this.currentAnimationName == animationKey && !force)
+                return;
+            if (this.currentAnimationName == "JUMP")
+                return;
+
+            this.stopAnimation();
+
+            var animationProps = Cast(this.animationProperties[animationKey]);
+            this.currentAnimation = this._scene.beginAnimation(this._mesh, animationProps.start, animationProps.end, animationProps.repeat, animationProps.speed);
+            this.currentAnimationName = animationKey;
+        };
+
+        Player.prototype.stopAnimation = function () {
+            if (this.currentAnimation) {
+                this.currentAnimation.stop();
+                delete this.currentAnimation;
+                delete this.currentAnimationName;
             }
         };
         return Player;
@@ -1072,7 +1125,20 @@ var GAME;
                 camera.speed = 8;
 
                 var animals = {};
-                var animalNames = ["bear", "fox", "wolf", "retreiver", "mountainlion", "tarbuffaloA", "vulture", "panther", "elk", "chowchow", "wolfFoxBear"];
+                var animalNames = [
+                    'bearBlack',
+                    'chowchow',
+                    'deer',
+                    'elk',
+                    'fox',
+                    'horse',
+                    'moose',
+                    'mountainlion',
+                    'parrot',
+                    'tarbuffaloA',
+                    'vulture',
+                    'wolf',
+                    'goldenretreiver'];
                 var loader = BABYLON.SceneLoader;
 
                 for (var i = 0; i < animalNames.length; i++) {
@@ -1124,8 +1190,14 @@ var GAME;
                         return;
                     if (evt.ctrlKey) {
                         mesh.material.wireframe = !pickResult.pickedMesh.material.wireframe;
+                    } else if (evt.altKey) {
+                        var lf = Cast(mesh).lastFrame = Cast(mesh).lastFrame || 0;
+                        var nf = ((lf + 1) % mesh.animations[0].getKeys().length);
+                        window.document.title = lf + "->" + nf;
+                        scene.beginAnimation(mesh, lf, nf, false, 1);
+                        Cast(mesh).lastFrame = nf;
                     } else {
-                        scene.beginAnimation(mesh, 0, mesh.animations[0].getKeys().length + 1, true, 1 + Math.random() * 10);
+                        Cast(window).lastAnimation = scene.beginAnimation(mesh, 1, mesh.animations[0].getKeys().length + 1, true, 1 + Math.random() * 10);
                     }
                 });
 

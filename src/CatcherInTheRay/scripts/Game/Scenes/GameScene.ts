@@ -62,7 +62,7 @@
                 // camera.attachControl(this._gameWorld._canvas);
                 // camera.maxZ = 10000;
                 // camera.speed = 8;
-                this.mainCamera = new BABYLON.FollowCamera("camera", new BABYLON.Vector3(0, 600, 0), scene);
+                this.mainCamera = new BABYLON.FollowCamera("camera", new BABYLON.Vector3(0, 1000, 0), scene);
                 this.mainCamera.maxZ = 10000;
                 this.mainCamera.speed = 8;
             }
@@ -150,7 +150,6 @@
 
                 this.startOrb.position = new BABYLON.Vector3(this._mapParams.pathTopOffset - this._mapParams.width / 2, 60, this._mapParams.height / 2 - 10);
                 this.endOrb.position = new BABYLON.Vector3(this._mapParams.pathBottomOffset - this._mapParams.width / 2, 20, this._mapParams.height / -2 + 10);                
-
             }
 
             private createPlayer(scene: BABYLON.Scene, meshName: string): void {
@@ -163,16 +162,17 @@
                     playerMesh.scaling = new BABYLON.Vector3(0.25, 0.25, 0.25);
                     playerMesh.position = new BABYLON.Vector3(0, -5, 0);
                     playerMesh.rotate(BABYLON.Axis.Y, Math.PI, BABYLON.Space.LOCAL);
+
                     var parent = BABYLON.Mesh.CreateSphere("colliderBox", 30, 2, scene, true);
-                    //var fakeKid = BABYLON.Mesh.CreateSphere("fakeKid", 30, 2, scene, false);
-                    //fakeKid.material = new BABYLON.StandardMaterial("fakeMat", scene);
-                    //fakeKid.material.wireframe = true;
+                    parent.isVisible = false;
                     parent.ellipsoid = new BABYLON.Vector3(5, 2.5, 15);
-                    //fakeKid.scaling = parent.ellipsoid;
-                    //fakeKid.showBoundingBox = true;
                     playerMesh.parent = parent;
-                    //fakeKid.parent = parent;
                     parent.position = this.startOrb.position.clone();
+
+                    var cameraFollowTarget = BABYLON.Mesh.CreateSphere("fakeKid", 30, 2, scene, false);
+                    cameraFollowTarget.material = new BABYLON.StandardMaterial("fakeMat", scene);
+                    cameraFollowTarget.isVisible = false;
+                    cameraFollowTarget.position = parent.position.clone();
 
                     this.player = new Player(playerMesh,this.mountains, scene);
 
@@ -183,10 +183,13 @@
                             this.mainCamera.rotationOffset = 0; // the viewing angle
                             this.mainCamera.cameraAcceleration = 0.05; // how fast to move
                             this.mainCamera.maxCameraSpeed = 4; // speed limit
-                            this.mainCamera.target = parent;
-                            this.mainCamera.setTarget(parent.position);
+                            this.mainCamera.target = cameraFollowTarget;
+                            this.mainCamera.setTarget(cameraFollowTarget.position);
                         } else if (this.mainCamera.target) {
-                            this.mainCamera.rotationOffset = UTILS.Utils.Clamp(this.player.CurrentRotation/Math.PI*180, -45,45);
+                            var moveTarget = parent.position.subtract(cameraFollowTarget.position);
+                            moveTarget.scaleInPlace(0.15);
+                            cameraFollowTarget.position.addInPlace(moveTarget);
+                            this.mainCamera.rotationOffset = UTILS.Utils.Clamp((this.player.CurrentRotation%Math.PI)/Math.PI*180, -45,45);
                         }
                     });
                 });
@@ -229,7 +232,7 @@
 
                 this.putStartAndEnd(scene);
 
-                this.createPlayer(scene, "fox");
+                this.createPlayer(scene, "wolf");
 
                 //window.addEventListener("click", function () {
                 //    // We try to pick an object

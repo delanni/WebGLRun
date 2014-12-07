@@ -16,6 +16,7 @@
     <IISExpressUseClassicPipelineMode />
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="assets\download.png" />
     <Content Include="assets\noisenormals.jpg" />
     <Content Include="assets\rockynoisenormals.jpg" />
     <Content Include="assets\Skybox\skyrender0001.png" />
@@ -27,15 +28,17 @@
     <Content Include="assets\sources.txt" />
     <Content Include="css\main.css" />
     <Content Include="index.html" />
+    <Content Include="models\chowchow.babylon" />
+    <Content Include="models\deer.babylon" />
+    <Content Include="models\elk.babylon" />
+    <Content Include="models\fox.babylon" />
+    <Content Include="models\horse.babylon" />
     <Content Include="models\licence.txt" />
-    <Content Include="models\scripts\licence.txt" />
-    <Content Include="models\scripts\meshMetaToBabylon.js" />
-    <Content Include="models\scripts\chopper\modelFileChopper.js" />
-    <Content Include="models\scripts\OBJExporter.js" />
-    <Content Include="models\scripts\objFaceExtractor.js" />
-    <Content Include="models\scripts\three.js" />
-    <Content Include="models\scripts\threeAnimationSplitter.js" />
-    <Content Include="models\scripts\threeToObj.js" />
+    <Content Include="models\mountainlion.babylon" />
+    <Content Include="models\parrot.babylon" />
+    <Content Include="models\tarbuffaloA.babylon" />
+    <Content Include="models\vulture.babylon" />
+    <Content Include="models\wolf.babylon" />
     <Content Include="scripts\Lib\babylon.1.11.js" />
     <Content Include="scripts\Lib\babylon.1.12.js" />
     <Content Include="scripts\Lib\babylon.1.13.js" />
@@ -47,31 +50,30 @@
     <Content Include="scripts\Lib\StackBlur.js" />
     <Content Include="scripts\Shaders\flat.fragment.fx" />
     <Content Include="scripts\Shaders\flat.vertex.fx" />
+    <Content Include="tools\models\chopper\goldenRetreiver.js" />
+    <Content Include="tools\models\chopper\modelFileChopper.js" />
+    <Content Include="tools\models\licence.txt" />
+    <Content Include="tools\models\meshMetaToBabylon.js" />
+    <Content Include="tools\models\OBJExporter.js" />
+    <Content Include="tools\models\objFaceExtractor.js" />
+    <Content Include="tools\models\three.js" />
+    <Content Include="tools\models\threeAnimationSplitter.js" />
+    <Content Include="tools\models\threeToObj.js" />
     <Content Include="web.config">
       <SubType>Designer</SubType>
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="models\models.zip" />
-    <Content Include="models\scripts\animal.bat" />
-    <Content Include="models\bear.babylon" />
-    <Content Include="models\bison.babylon" />
-    <Content Include="models\chowchow.babylon" />
-    <Content Include="models\deer.babylon" />
-    <Content Include="models\eagle.babylon" />
-    <Content Include="models\elk.babylon" />
-    <Content Include="models\fox.babylon" />
-    <Content Include="models\horse.babylon" />
-    <Content Include="models\mountainlion.babylon" />
-    <Content Include="models\owl.babylon" />
-    <Content Include="models\panther.babylon" />
-    <Content Include="models\parrot.babylon" />
-    <Content Include="models\rabbit.babylon" />
-    <Content Include="models\retreiver.babylon" />
-    <Content Include="models\tarbuffaloA.babylon" />
-    <Content Include="models\toad.babylon" />
-    <Content Include="models\vulture.babylon" />
-    <Content Include="models\wolf.babylon" />
+    <Content Include="tools\models\animal.bat" />
+    <Content Include="tools\models\chopper\animal.bat" />
+    <Content Include="tools\models\chopper\convertAllAnimals.bat" />
+    <Content Include="tools\models\chopper\goldenRetreiver.babylon" />
+    <Content Include="tools\models\chopper\goldenretreiver_colorMap.obj" />
+    <Content Include="tools\models\fox.bat" />
+    <Content Include="tools\models\models.zip" />
+    <Content Include="models\bearBlack.babylon" />
+    <Content Include="models\goldenRetreiver.babylon" />
+    <Content Include="models\moose.babylon" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
     </None>

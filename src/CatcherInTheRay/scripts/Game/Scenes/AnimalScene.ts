@@ -36,7 +36,19 @@ module GAME {
                 camera.speed = 8;
 
                 var animals = {};
-                var animalNames = ["bear", "fox", "wolf", "retreiver", "mountainlion", "tarbuffaloA", "vulture", "panther", "elk", "chowchow", "wolfFoxBear"];
+                var animalNames = ['bearBlack',
+                    'chowchow',
+                    'deer',
+                    'elk',
+                    'fox',
+                    'horse',
+                    'moose',
+                    'mountainlion',
+                    'parrot',
+                    'tarbuffaloA',
+                    'vulture',
+                    'wolf',
+                    'goldenretreiver' ];
                 var loader = BABYLON.SceneLoader;
 
                 for (var i = 0; i < animalNames.length; i++) {
@@ -85,8 +97,14 @@ module GAME {
                     if (!mesh) return;
                     if (evt.ctrlKey) {
                         mesh.material.wireframe = !pickResult.pickedMesh.material.wireframe;
+                    } else if (evt.altKey) {
+                        var lf = Cast<any>(mesh).lastFrame = Cast<any>(mesh).lastFrame || 0;
+                        var nf = ((lf + 1) % mesh.animations[0].getKeys().length);
+                        window.document.title = lf + "->" + nf;
+                        scene.beginAnimation(mesh, lf, nf, false, 1);
+                        Cast<any>(mesh).lastFrame = nf;
                     } else {
-                        scene.beginAnimation(mesh, 0, mesh.animations[0].getKeys().length + 1, true, 1 + Math.random() *10);
+                        Cast<any>(window).lastAnimation = scene.beginAnimation(mesh, 1, mesh.animations[0].getKeys().length + 1, true, 1 + Math.random() * 10);
                     }
                 });
 
