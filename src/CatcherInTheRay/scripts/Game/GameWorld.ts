@@ -10,30 +10,34 @@ module GAME {
         _scenes: { [name: string]: SCENES.SceneBuilder } = {};
 
         /// DEFAULTS ARE HERE ///
+        private random = new MersenneTwister(111);
         _defaults: GameProperties = {
             _sceneId: GAME.Scenes.GAME,
             _gameParameters: {
-                randomSeed: 345,
+                randomSeed: 111,
+                random: this.random,
                 useFlatShading: false
             },
             _mapParameters: {
                 destructionLevel: 13,
                 displayCanvas: false,
                 height: 1500,
-                width: 800,
+                width: 600,
                 minHeight: 0,
                 maxHeight: 300,
-                subdivisions: 180,
+                subdivisions: 200,
+                random: this.random,
                 param: 1.1,
-                random: new MersenneTwister(12345),
-                pathBottomOffset: 80,
-                pathTopOffset: 720,
-                shrink: 1,
+                pathBottomOffset: 300,
+                pathTopOffset: 300,
+                shrink: 1.7,
                 eqFactor: 1
             }
         };
 
         constructor(canvasId: string, fullify?: string) {
+            BABYLON.Engine.ShadersRepository = "scripts/Shaders/";
+
             this._canvas = Cast<HTMLCanvasElement>(document.getElementById(canvasId));
             this._engine = new BABYLON.Engine(this._canvas);
             this._scene = new BABYLON.Scene(this._engine);
@@ -71,6 +75,10 @@ module GAME {
                 case Scenes.ANIMAL:
                     var animalScene = new SCENES.AnimalScene(this);
                     this._scenes["ANIMAL"] = animalScene;
+                    break;
+                case Scenes.TERRAINGEN:
+                    var terrainGenScene = new SCENES.TerrainGenScene(this, parameters._gameParameters, parameters._mapParameters);
+                    this._scenes["TERRAINGEN"] = terrainGenScene;
                     break;
             }
         }
@@ -173,6 +181,9 @@ module GAME {
                 case Scenes.ANIMAL:
                     this._scene = this._scenes["ANIMAL"].BuildScene();
                     break;
+                case Scenes.TERRAINGEN: 
+                    this._scene = this._scenes["TERRAINGEN"].BuildScene();
+                    break;
             }
 
             this._scene.registerBeforeRender(() => {
@@ -191,6 +202,7 @@ module GAME {
         TEST = 0,
         MAIN = 1,
         GAME = 2,
-        ANIMAL = 3
+        ANIMAL = 3,
+        TERRAINGEN = 4
     };
 }

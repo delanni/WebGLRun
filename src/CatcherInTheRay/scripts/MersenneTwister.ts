@@ -1,11 +1,11 @@
 ﻿// CREDITS to Jérémy Bouny : https://github.com/jbouny/terrain-generator/blob/master/randoms/mersenne-twister.js
 // CREDITS to Makoto Matsumoto and Takuji Nishimura and Sean McCullough http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html
 
-interface RandomProvider {
+interface IRandomProvider {
     Random: () => number;
 }
 
-class MersenneTwister implements RandomProvider {
+class MersenneTwister implements IRandomProvider {
     private N: number;
     private M: number;
     private MATRIX_A: number;

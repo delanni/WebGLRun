@@ -1,9 +1,9 @@
 ﻿module TERRAIN {
     export class PathGenerator {
 
-        r: RandomProvider;
+        r: IRandomProvider;
 
-        constructor(random: RandomProvider) {
+        constructor(random: IRandomProvider) {
             this.r = random;
         }
 

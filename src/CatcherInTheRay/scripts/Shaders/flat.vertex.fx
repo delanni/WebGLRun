@@ -23,15 +23,15 @@ varying vec3 f_light2;
 varying vec3 f_light2Color;
 
 void main(void) {
-	f_light1 = (worldView * vec4(light1Position, 1.0)).xyz;
+	f_light1 = (worldViewProjection * vec4(light1Position, 1.0)).xyz;
 	f_light1Color = light1Color;
 	
-	f_light2 = (worldView * vec4(light2Position, 1.0)).xyz;
+	f_light2 = (worldViewProjection * vec4(light2Position, 1.0)).xyz;
 	f_light2Color = light2Color;
 	
 	f_color = color;
 	f_camPos = (worldView * vec4(cameraPosition, 1.0)).xyz;
-	f_VertexEc = (world * vec4(position, 1.0)).xyz;
+	f_VertexEc = (worldViewProjection * vec4(position, 1.0)).xyz;
 	
     gl_Position = worldViewProjection * vec4(position, 1.0);
 }

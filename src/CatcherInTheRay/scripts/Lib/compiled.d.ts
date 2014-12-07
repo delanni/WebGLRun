@@ -109,6 +109,7 @@ declare module GAME {
     module SCENES {
         interface GameParameters {
             randomSeed: number;
+            random: IRandomProvider;
             debug?: boolean;
             useFlatShading?: boolean;
         }
@@ -117,7 +118,21 @@ declare module GAME {
             public _debug: boolean;
             public _useFlatShading: boolean;
             public _mapParams: TERRAIN.HeightMapGeneratorParams;
+            public _physicsEngine: BABYLON.OimoJSPlugin;
+            public _flatShader: BABYLON.ShaderMaterial;
+            public mainCamera: BABYLON.FollowCamera;
+            public followPlayer: boolean;
+            public startOrb: BABYLON.Mesh;
+            public endOrb: BABYLON.Mesh;
+            public mountains: BABYLON.Mesh;
+            public player: Player;
             constructor(gameWorld: GameWorld, parameters: GameParameters, mapParameters: TERRAIN.HeightMapGeneratorParams);
+            private addLightsAndCamera(scene);
+            private addSkyDome(scene);
+            private generateLandscape(scene);
+            private putStartAndEnd(scene);
+            private createPlayer(scene, meshName);
+            private createFlatShader(scene);
             public BuildSceneAround(scene: BABYLON.Scene): BABYLON.Scene;
         }
     }
@@ -133,6 +148,7 @@ declare module GAME {
         public _scenes: {
             [name: string]: SCENES.SceneBuilder;
         };
+        private random;
         public _defaults: GameProperties;
         constructor(canvasId: string, fullify?: string);
         public applyGuiParams(guiParams: GameProperties): void;
@@ -154,12 +170,58 @@ declare module GAME {
         MAIN = 1,
         GAME = 2,
         ANIMAL = 3,
+        TERRAINGEN = 4,
+    }
+}
+declare module GAME {
+    class Player {
+        public INTERSECTION_TRESHOLD: number;
+        public BASE_ACCELERATION: number;
+        public BASE_JUMP_POW: number;
+        public LAND_COOLDOWN: number;
+        public ROTATION_APPROXIMATOR: number;
+        public MINVECTOR: BABYLON.Vector3;
+        public MAXVECTOR: BABYLON.Vector3;
+        public GRAVITY: BABYLON.Vector3;
+        public _mesh: BABYLON.Mesh;
+        public _parent: BABYLON.Mesh;
+        public _scene: BABYLON.Scene;
+        public _bottomVector: BABYLON.Vector3;
+        public _ray: BABYLON.Ray;
+        public _ground: BABYLON.Mesh;
+        public _acceptedKeys: {};
+        public CurrentRotation: number;
+        public _keys: any;
+        public _landTime: number;
+        public rotationMatrix: BABYLON.Matrix;
+        public velocity: BABYLON.Vector3;
+        public isOnGround: boolean;
+        constructor(mesh: BABYLON.Mesh, ground: BABYLON.Mesh, scene: BABYLON.Scene);
+        public _activeKeys: number;
+        public _rotationOffset: number;
+        public _lastRotationTarget: number;
+        public Jump(power: number): void;
+        public Accelerate(factor: number): void;
+        public RotateTo(targetRot: number): void;
+        private readKeys();
     }
 }
 declare module GAME {
     module SCENES {
         class AnimalScene extends SceneBuilder {
             constructor(gameWorld: GameWorld);
+            public BuildSceneAround(scene: BABYLON.Scene): BABYLON.Scene;
+        }
+    }
+}
+declare module GAME {
+    module SCENES {
+        class TerrainGenScene extends SceneBuilder {
+            public _randomSeed: number;
+            public _debug: boolean;
+            public _useFlatShading: boolean;
+            public _mapParams: TERRAIN.HeightMapGeneratorParams;
+            constructor(gameWorld: GameWorld, parameters: GameParameters, mapParameters: TERRAIN.HeightMapGeneratorParams);
             public BuildSceneAround(scene: BABYLON.Scene): BABYLON.Scene;
         }
     }
@@ -192,10 +254,10 @@ declare module UTILS {
         static Clamp(scalar: number, min: number, max: number): number;
     }
 }
-interface RandomProvider {
+interface IRandomProvider {
     Random: () => number;
 }
-declare class MersenneTwister implements RandomProvider {
+declare class MersenneTwister implements IRandomProvider {
     private N;
     private M;
     private MATRIX_A;
@@ -227,7 +289,7 @@ declare module TERRAIN {
         destructionLevel?: number;
         subdivisions?: number;
         param?: number;
-        random?: RandomProvider;
+        random?: IRandomProvider;
         pathTopOffset?: number;
         pathBottomOffset?: number;
         shrink?: number;
@@ -265,8 +327,8 @@ declare module TERRAIN {
 }
 declare module TERRAIN {
     class PathGenerator {
-        public r: RandomProvider;
-        constructor(random: RandomProvider);
+        public r: IRandomProvider;
+        constructor(random: IRandomProvider);
         /**
         * This is the function to generate and draw a path on the canvas
         **/
@@ -284,7 +346,7 @@ declare module TERRAIN {
 }
 declare module TERRAIN {
     interface NoiseParameters {
-        random: RandomProvider;
+        random: IRandomProvider;
         width?: number;
         height?: number;
         canvas?: HTMLCanvasElement;
@@ -294,7 +356,7 @@ declare module TERRAIN {
     class PerlinNoiseGenerator {
         public Canvas: HTMLCanvasElement;
         public Parameters: NoiseParameters;
-        public Random: RandomProvider;
+        public Random: IRandomProvider;
         private randomNoise(separateCanvas, displayCanvas);
         constructor(inParameters: NoiseParameters);
         public Generate(canvas?: HTMLCanvasElement, separateCanvas?: boolean): HTMLCanvasElement;

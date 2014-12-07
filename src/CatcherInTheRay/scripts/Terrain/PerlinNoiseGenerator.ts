@@ -4,7 +4,7 @@
 
 module TERRAIN {
     export interface NoiseParameters {
-        random: RandomProvider;
+        random: IRandomProvider;
         width?: number;
         height?: number;
         canvas?: HTMLCanvasElement;
@@ -16,7 +16,7 @@ module TERRAIN {
 
         public Canvas: HTMLCanvasElement;
         public Parameters: NoiseParameters;
-        public Random: RandomProvider;
+        public Random: IRandomProvider;
 
         private randomNoise(separateCanvas: boolean, displayCanvas: boolean) {
             var noiseCanvas = separateCanvas ?

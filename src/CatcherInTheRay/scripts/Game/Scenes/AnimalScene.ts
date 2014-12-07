@@ -36,10 +36,8 @@ module GAME {
                 camera.speed = 8;
 
                 var animals = {};
-                var animalNames = ["bear", "fox", "wolf", "retreiver", "mountainlion", "tarbuffaloA", "vulture", "panther", "elk", "chowchow"];
+                var animalNames = ["bear", "fox", "wolf", "retreiver", "mountainlion", "tarbuffaloA", "vulture", "panther", "elk", "chowchow", "wolfFoxBear"];
                 var loader = BABYLON.SceneLoader;
-
-                BABYLON.Engine.ShadersRepository = "scripts/Shaders/";
 
                 for (var i = 0; i < animalNames.length; i++) {
                     // cheat :)
@@ -73,7 +71,7 @@ module GAME {
                                     a.setVerticesData(BABYLON.VertexBuffer.PositionKind, val, true);
                                 });
                             }
-                        }, null, x=> { console.error("Failed to load."); });
+                        }, null, x=> { console.error("Failed to load.", arguments); });
                     })();
                 }
 

@@ -21,8 +21,14 @@ class GUI {
     }
 
     public Reload() {
-        this._gameWorld.applyGuiParams(this.properties);
-        this._gameWorld.loadScene(this.properties._sceneId);
+        var random = new MersenneTwister(this.properties._gameParameters.randomSeed);
+        this.properties._gameParameters.random = random;
+        this.properties._mapParameters.random = random;
+        this._gameWorld._engine.displayLoadingUI().then(() => {
+            this._gameWorld.applyGuiParams(this.properties);
+            this._gameWorld.loadScene(this.properties._sceneId);
+            this._gameWorld._engine.hideLoadingUI();
+        });
     }
 
 
@@ -41,12 +47,18 @@ class GUI {
         this._gui = new dat.GUI();
 
         var sceneFolder = this._gui.addFolder("Scenes");
-        sceneFolder.add(this.properties, "_sceneId", { "Test": GAME.Scenes.TEST, "Game": GAME.Scenes.GAME, "Animals": GAME.Scenes.ANIMAL }).name("Scene")
+        sceneFolder.add(this.properties, "_sceneId", {
+            "Test": GAME.Scenes.TEST,
+            "TerrainGen": GAME.Scenes.TERRAINGEN,
+            "Animals": GAME.Scenes.ANIMAL,
+            "Game": GAME.Scenes.GAME
+        }).name("Scene")
             .onChange((x) => this.properties._sceneId = +x);
         sceneFolder.open();
 
-        var gameFolder = this._gui.addFolder("Game Map");
+        var gameFolder = this._gui.addFolder("Game properties");
         var flatShadingCtr = gameFolder.add(this.properties._gameParameters, "useFlatShading").name("Use flat shading");
+        var randomSeedCtr = gameFolder.add(this.properties._gameParameters, "randomSeed").name("Random seed").min(0).max(2000).step(1);
         gameFolder.open();
 
         var terrainGenFolder = this._gui.addFolder("Terrain and landscape");
@@ -62,14 +74,12 @@ class GUI {
         terrainGenFolder.add(this.properties._mapParameters, "maxHeight").name("Maximum height of the map").min(100).max(500).step(5);
 
         var subdivCtr = terrainGenFolder.add(this.properties._mapParameters, "subdivisions").name("Number of subdivisions").min(1).max(300).step(1);
-        flatShadingCtr.onChange(x=> {
-            subdivCtr.max(x ? 100 : 300);
-            subdivCtr.setValue(Math.min(this.properties._mapParameters.subdivisions, 100));
-        });
 
         widthCtr.onChange(x=> {
-            pathBottomCtr.setValue(Math.min(x, pathBottomCtr.getValue())).max(x);
-            pathTopCtr.setValue(Math.min(x, pathTopCtr.getValue())).max(x);
+           // pathBottomCtr.setValue(Math.min(x, pathBottomCtr.getValue())).max(x);
+           // pathTopCtr.setValue(Math.min(x, pathTopCtr.getValue())).max(x);
+            pathBottomCtr.setValue(Math.floor(x/2)).max(x);
+            pathTopCtr.setValue(Math.floor(x/2)).max(x);
         });
 
         terrainGenFolder.add(this.properties._mapParameters, "param").name("Perlin-Noise parameter").min(1.0).max(3.0).step(0.1);

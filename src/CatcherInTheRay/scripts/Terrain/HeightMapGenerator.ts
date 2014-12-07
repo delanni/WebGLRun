@@ -14,7 +14,7 @@ module TERRAIN {
         destructionLevel?: number;
         subdivisions?: number;
         param?: number;
-        random?: RandomProvider;
+        random?: IRandomProvider;
         pathTopOffset?: number;
         pathBottomOffset?: number;
         shrink?: number;

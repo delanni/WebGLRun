@@ -4532,11 +4532,39 @@ var BABYLON;
             document.removeEventListener("webkitpointerlockchange", this._onPointerLockChange);
         };
 
+        // https://gist.github.com/davidcalhoun/702826
+        var transitionKey = 'transitionend';
+        if ('ontransitionend' in window) {
+            // Firefox
+            transition = 'transitionend';
+        } else if ('onwebkittransitionend' in window) {
+            // Chrome/Saf (+ Mobile Saf)/Android
+            transition = 'webkitTransitionEnd';
+        } else if ('onotransitionend' in myDiv || navigator.appName == 'Opera') {
+            // Opera
+            transition = 'oTransitionEnd';
+        } else {
+            // IE ?
+            transition = 'transitionend';
+        }
        
         Engine.prototype.displayLoadingUI = function () {
             var _this = this;
-            this._loadingDiv = document.createElement("div");
 
+            var chain = {
+                callbacks: [],
+                then: function (F) {
+                    chain.callbacks.push(F);
+                    return chain;
+                },
+                call: function (arg) {
+                    for (var i = 0; i < chain.callbacks.length; i++)
+                        chain.callbacks[i].call(chain, arg);
+                }
+            }
+
+            this._loadingDiv = document.createElement("div");
+            this._loadingDiv.id = "axana";
             this._loadingDiv.style.opacity = "0";
             this._loadingDiv.style.transition = "opacity 1.5s ease";
 
@@ -4576,8 +4604,7 @@ var BABYLON;
                 imgBack.style.webkitTransform = "rotateZ(" + deg + "deg)";
             };
 
-            imgBack.addEventListener("transitionend", onTransitionEnd);
-            imgBack.addEventListener("webkitTransitionEnd", onTransitionEnd);
+            imgBack.addEventListener(transitionKey, onTransitionEnd);
 
             this._loadingDiv.appendChild(imgBack);
 
@@ -4613,7 +4640,13 @@ var BABYLON;
                 _this._loadingDiv.style.opacity = "1";
                 imgBack.style.transform = "rotateZ(360deg)";
                 imgBack.style.webkitTransform = "rotateZ(360deg)";
+                _this._loadingDiv.addEventListener(transitionKey, function () {
+                    if (chain) chain.call();
+                    chain = null;
+                });
             }, 0);
+
+            return chain;
         };
 
         Object.defineProperty(Engine.prototype, "loadingUIText", {
@@ -4652,6 +4685,18 @@ var BABYLON;
                 return;
             }
 
+            var chain = {
+                callbacks : [],
+                then: function (F) {
+                    chain.callbacks.push(F);
+                    return chain;
+                },
+                call: function (arg) {
+                    for (var i = 0; i < chain.callbacks.length;i++)
+                      chain.callbacks[i].call(chain, arg);
+                }
+            }
+
             var onTransitionEnd = function () {
                 if (!_this._loadingDiv) {
                     return;
@@ -4660,10 +4705,19 @@ var BABYLON;
                 window.removeEventListener("resize", _this._resizeLoadingUI);
 
                 _this._loadingDiv = null;
+                chain.call();
             };
 
             this._loadingDiv.style.opacity = "0";
-            this._loadingDiv.addEventListener("transitionend", onTransitionEnd);
+            this._loadingDiv.addEventListener(transitionKey, onTransitionEnd);
+
+            // for any other fail case
+            setTimeout(function () {
+                var veil = document.getElementById("axana");
+                if (veil) document.body.removeChild(veil);
+            }, 500);
+
+            return chain;
         };
 
        
@@ -16979,6 +17033,11 @@ var BABYLON;
                 }
             }
         };
+
+        OimoJSPlugin.prototype.getRegisteredMeshes = function () {
+            return this._registeredMeshes;
+        };
+        
         return OimoJSPlugin;
     })();
     BABYLON.OimoJSPlugin = OimoJSPlugin;

@@ -1,4 +1,7 @@
 declare module BABYLON {
+    interface Chainable<T,K> {
+        then: (T) => K;
+    }
     class _DepthCullingState {
         private _isDepthTestDirty;
         private _isDepthMaskDirty;
@@ -183,10 +186,10 @@ declare module BABYLON {
         public _setAnisotropicLevel(key: number, texture: BaseTexture): void;
         public readPixels(x: number, y: number, width: number, height: number): Uint8Array;
         public dispose(): void;
-        public displayLoadingUI(): void;
+        public displayLoadingUI(): Chainable<void,void>;
         public loadingUIText : string;
         public loadingUIBackgroundColor : string;
-        public hideLoadingUI(): void;
+        public hideLoadingUI(): Chainable<void,void>;
         static isSupported(): boolean;
     }
 }
@@ -2803,6 +2806,7 @@ declare module BABYLON {
         public isSupported(): boolean;
         private _getLastShape(body);
         public runOneStep(time: number): void;
+        public getRegisteredMeshes(): { body: any; mesh: AbstractMesh; delta: Vector3 }[];
     }
 }
 declare module BABYLON {
