@@ -1,12 +1,10 @@
 ﻿module TERRAIN {
 
-    export interface TerrainGeneratorParams {
-        width: number;
-        height: number;
+    export interface TerrainGeneratorParams extends HeightMapGeneratorParams {
         subdivisions: number;
+        randomSeed: number;
         minHeight: number;
         maxHeight: number;
-        displayCanvas: boolean;
         colors?: any[];
     }
 
@@ -87,7 +85,11 @@
         }
 
         public GenerateWrappingMesh(mesh: BABYLON.Mesh, scene: BABYLON.Scene): BABYLON.Mesh {
+
+            // Get vertex info
             var vertices = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+
+            // Get info about the edges
             var bbox = mesh.getBoundingInfo();
             var xMin = bbox.minimum.x;
             var xMax = bbox.maximum.x;
@@ -95,6 +97,8 @@
             var zMax = bbox.maximum.z;
             var yMin = bbox.minimum.y;
             var yMax = bbox.maximum.y;
+
+            // Create predicates for edge test
             var checkTriadIsOnXEdge = function (x: number, y: number, z: number): boolean {
                 if (x == xMin || x == xMax) return true;
                 return false;
@@ -108,32 +112,39 @@
             var xRight = [];
             var zTop = [];
             var zBottom = [];
-            var actualBottomShift = 0;
             var maxDistance = Math.sqrt(xMin * xMin + zMin * zMin);
             for (var i = 0; i < vertices.length; i += 3) {
                 var x = vertices[i];
                 var y = vertices[i + 1];
                 var z = vertices[i + 2];
                 var d = Math.sqrt(x * x + z * z);
+                var bottomCoverHeight =  -70 - Math.floor(100 * maxDistance / d);
+                // categorize vertices to different arrays, and push 3 additional coordinates for each vertex
+                // the additional ones are the bottom's parts
                 if (checkTriadIsOnXEdge(x, y, z)) {
-                    if (x == xMin) xLeft.push(x, y, z, x, -70 - Math.floor(100 * maxDistance / d) + (Math.random() * 20), z);
-                    else xRight.unshift(x, y, z, x, -70 - Math.floor(100 * maxDistance / d) + (Math.random() * 20), z);
+                    if (x == xMin) xLeft.push(x, y, z, x, bottomCoverHeight  + (Math.random() * 20), z);
+                    else xRight.unshift(x, y, z, x, bottomCoverHeight + (Math.random() * 20), z);
                 } else if (checkTriadIsOnZEdge(x, y, z)) {
-                    if (z == zMin) zBottom.push(x, y, z, x, -70 - Math.floor(100 * maxDistance / d) + (Math.random() * 20), z);
-                    else zTop.unshift(x, y, z, x, -70 - Math.floor(100 * maxDistance / d) + (Math.random() * 20), z);
+                    if (z == zMin) zBottom.push(x, y, z, x, bottomCoverHeight + (Math.random() * 20), z);
+                    else zTop.unshift(x, y, z, x, bottomCoverHeight + (Math.random() * 20), z);
                 }
-
             }
+            // concatenate the different parts to a contiguous array
+            // ordered as if going around the map's edge
             var wrappingPoints = xRight.concat(zTop, xLeft, zBottom);
             var wrappingUvs = [];
+
+            // guess the uv coordinates (tried a lot, but still buggy)
             var uvxprog = 1 / (wrappingPoints.length / 6);
             for (var i = 0; i < wrappingPoints.length / 3; i += 2) {
                 wrappingUvs.push(uvxprog * i, wrappingPoints[3 * i + 1] / yMax, uvxprog * i,0);
             }
 
+            // generate indices for the newly created faces
             var wrappingIndices = [];
-            var triplets = wrappingPoints.length / 3; // = subdiv * 8
+            var triplets = wrappingPoints.length / 3;
             for (var i = 0; i < triplets; i += 2) {
+                // 2 faces for each quad
                 wrappingIndices.push(i, (i + 1) % triplets, (i + 3) % triplets);
                 wrappingIndices.push((i + 2) % triplets, i, (i + 3) % triplets);
             }
@@ -141,6 +152,7 @@
             var wrappingNormals = [];
             BABYLON.VertexData.ComputeNormals(wrappingPoints, wrappingIndices, wrappingNormals);
 
+            // install vertex data, and generate mesh
             var vertexData = new BABYLON.VertexData();
             vertexData.indices = wrappingIndices;
             vertexData.positions = wrappingPoints;

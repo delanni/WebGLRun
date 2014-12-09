@@ -237,6 +237,8 @@ var outObject = {
 
 console.log("Writing file: " + outFile);
 fs.writeFileSync(outFile, beautify(JSON.stringify(outObject)) );
+console.log("Writing file: " + outFile + ".manifest");
+fs.writeFileSync(outFile+".manifest", '{ "version" : 4, "enableSceneOffline" : true, "enableTexturesOffline" : false }');
 console.log("Finished.");
 
 // end: Writing file

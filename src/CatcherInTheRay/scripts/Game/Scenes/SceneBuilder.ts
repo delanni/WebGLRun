@@ -2,14 +2,15 @@
     export module SCENES {
         export class SceneBuilder {
             _gameWorld: GAME.GameWorld;
+            _scene: BABYLON.Scene;
 
             constructor(gameWorld: GAME.GameWorld) {
                 this._gameWorld = gameWorld;
             }
 
             public BuildScene(): BABYLON.Scene {
-                var scene = new BABYLON.Scene(this._gameWorld._engine);
-                return this.BuildSceneAround(scene);
+                this._scene = new BABYLON.Scene(this._gameWorld._engine);
+                return this.BuildSceneAround(this._scene);
             }
 
             public BuildSceneAround(scene: BABYLON.Scene): BABYLON.Scene {

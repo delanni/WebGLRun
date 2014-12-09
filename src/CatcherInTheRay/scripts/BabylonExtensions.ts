@@ -11,7 +11,7 @@
             var context = canvas.getContext("2d");
             var canvasBuffer = context.getImageData(0, 0, canvas.width, canvas.height);
 
-            var vertexData = BABYLON.VertexData.CreateGroundFromHeightMap(width, height, subdivisions, minHeight, maxHeight, canvasBuffer.data, canvasBuffer.width, canvasBuffer.height);
+            var vertexData = Cast<any>(BABYLON.VertexData).CreateGroundFromHeightMap(width, height, subdivisions, minHeight, maxHeight,canvasBuffer.data, canvasBuffer.width, canvasBuffer.height);
             vertexData.applyToMesh(groundBase, updatable);
 
             return groundBase;

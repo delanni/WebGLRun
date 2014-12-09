@@ -5,10 +5,9 @@
             _randomSeed: number;
             _debug: boolean;
             _useFlatShading: boolean;
-            _mapParams: TERRAIN.HeightMapGeneratorParams;
+            _mapParams: TERRAIN.TerrainGeneratorParams;
 
-            constructor(gameWorld: GAME.GameWorld, parameters: GameParameters, mapParameters: TERRAIN.HeightMapGeneratorParams) {
-                this._randomSeed = parameters.randomSeed;
+            constructor(gameWorld: GAME.GameWorld, parameters: GameParameters, mapParameters: TERRAIN.TerrainGeneratorParams) {
                 this._debug = parameters.debug || true;
                 this._useFlatShading = parameters.useFlatShading;
                 this._mapParams = mapParameters;
@@ -53,7 +52,7 @@
                 skyboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
                 skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
                 skyboxMaterial.reflectionTexture = Cast<BABYLON.Texture>(new BABYLON.CubeTexture(
-                    "../assets/Skybox/skyrender", scene,
+                    "/assets/Skybox/skyrender", scene,
                     //  +x          +y          +z          -x          -y          -z
                     ["0006.png", "0002.png", "0001.png", "0003.png", "0005.png", "0004.png"]));
                 skyboxMaterial.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
@@ -65,14 +64,7 @@
                 var noise = landscapeGenerator.GenerateHeightMap();
 
                 // Terrain from the heightmap
-                var terrainGenerator = new TERRAIN.TerrainGenerator({
-                    displayCanvas: this._mapParams.displayCanvas,
-                    height: this._mapParams.height,
-                    width: this._mapParams.width,
-                    maxHeight: this._mapParams.maxHeight,
-                    minHeight: this._mapParams.minHeight,
-                    subdivisions: this._mapParams.subdivisions
-                });
+                var terrainGenerator = new TERRAIN.TerrainGenerator(this._mapParams);
 
                 // Heightmap to mesh
                 Trace("Mesh from height map");
@@ -120,7 +112,7 @@
                 mountainSideMaterial.diffuseColor = new BABYLON.Color3(0.43, 0.29, 0.03);
                 // source: https://elliptic-games.com/images/Milestone1-2.jpg
                 // TODO: something is not quite right with this one
-                mountainSideMaterial.bumpTexture = new BABYLON.Texture("assets/noisenormals.jpg", scene);
+                mountainSideMaterial.bumpTexture = new BABYLON.Texture("/assets/noisenormals.jpg", scene);
 
                 // Put start and end
                 var startOrb = BABYLON.Mesh.CreateSphere("startOrb", 30, 30, scene, true);

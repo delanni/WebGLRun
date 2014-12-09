@@ -1,0 +1,180 @@
+﻿body {
+    background: #56FF43;
+    margin: 0;
+    font-family: Verdana;
+}
+
+#loginForm {
+    background: #56FF43;
+    width: 100%;
+    border-radius: 4px;
+    box-shadow: 3px 3px 3px #151111;
+}
+
+.inputgroup {
+    margin-bottom: 4px;
+    margin-top: 4px;
+    border-radius: 4px;
+    -moz-transition: 0.4s;
+    -o-transition: 0.4s;
+    -webkit-transition: 0.4s;
+    transition: 0.4s;
+}
+
+.inputgroup.hide{
+    opacity:0;
+    pointer-events:none;
+    cursor:auto;
+}
+
+.playerCard {
+    background: lightblue;
+    box-shadow: -6px 0 0 0 blue, 6px 0 0 0 blue, 0 -2px 0 0 blue, 0 2px 0 0 blue;
+    padding: 8px;
+    max-width: 210px;
+    height: 80px;
+    max-height: 80px;
+    margin: 8px;
+    overflow: hidden;
+}
+
+.playerName, .playerScore {
+    font-weight: bold;
+    margin: 0 4px 0 4px;
+    -ms-text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-wrap: none;
+    color: #222;
+}
+
+#descriptionBox {
+    background-color: #9668f8;
+    padding: 16px;
+    display: none;
+    color: #222;
+}
+
+.grayscale {
+    background-color: transparent !important;
+    -webkit-filter: grayscale(100%);
+    -moz-filter: grayscale(100%);
+    -ms-filter: grayscale(100%);
+    filter: grayscale(100%);
+    -moz-transition: 0.5s;
+    -o-transition: 0.5s;
+    -webkit-transition: 0.5s;
+    transition: 0.5s;
+}
+
+.selectButton {
+    width: 100%;
+    font-family: Verdana;
+    text-align: center;
+    background: #5A9EE8;
+    padding: 4px 0;
+    font-size: x-large;
+    font-weight: bold;
+    color: #222;
+    -moz-transition: background .25s ease-in-out;
+    -o-transition: background .25s ease-in-out;
+    -webkit-transition: background .25s ease-in-out;
+    transition: background .25s ease-in-out;
+}
+
+    .selectButton:hover {
+        cursor: pointer;
+        background: #3978be;
+    }
+
+input.input {
+    margin: 0;
+    font-size: xx-large;
+    color: #56FF43;
+    cursor: pointer;
+}
+
+.input {
+    background: #5A9EE8;
+    box-shadow: -4px 0 0 0 #151111, 4px 0 0 0 #151111;
+    border: 0;
+    text-align: center;
+    width: 100%;
+    color: #56FF43;
+    -moz-transition: background .25s ease-in-out;
+    -o-transition: background .25s ease-in-out;
+    -webkit-transition: background .25s ease-in-out;
+    transition: background .25s ease-in-out;
+}
+
+    .input:hover, .input:focus {
+        background-color: #3978be;
+    }
+
+
+.characterCard {
+    overflow: auto;
+    width: 100%;
+    background: #3978be;
+}
+
+
+    .characterCard .avatar {
+        cursor: pointer;
+        margin: 0 6px 0 6px;
+        float: left;
+        background-color: #9668f8;
+        -moz-transition: 0.5s;
+        -o-transition: 0.5s;
+        -webkit-transition: 0.5s;
+        transition: 0.5s;
+    }
+
+.a-fox {
+    width: 128px;
+    height: 128px;
+    background-image: url('/assets/Profiles/fox.jpg');
+}
+
+.a-deer {
+    width: 128px;
+    height: 128px;
+    background-image: url('/assets/Profiles/deer.jpg');
+}
+
+.a-mountainlion {
+    width: 128px;
+    height: 128px;
+    background-image: url('/assets/Profiles/mountainlion.jpg');
+}
+
+.a-moose {
+    width: 128px;
+    height: 128px;
+    background-image: url('/assets/Profiles/moose.jpg');
+}
+
+.a-wolf {
+    width: 128px;
+    height: 128px;
+    background-image: url('/assets/Profiles/wolf.jpg');
+}
+
+.a-chowchow {
+    width: 128px;
+    height: 128px;
+    background-image: url('/assets/Profiles/chowchow.jpg');
+}
+
+.a-goldenRetreiver {
+    width: 128px;
+    height: 128px;
+    background-image: url('/assets/Profiles/goldenRetreiver.jpg');
+}
+
+.a-elk {
+    width: 128px;
+    height: 128px;
+    background-image: url('/assets/Profiles/elk.jpg');
+}

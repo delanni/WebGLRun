@@ -1,0 +1,16 @@
+{
+  "name": "ServerProject",
+  "version": "0.2.0",
+  "description": "ServerProject",
+  "main": "app.js",
+  "author": {
+    "name": "Alex",
+    "email": "delanni.alex@gmail.com"
+  },
+  "dependencies": {
+    "ejs": "^1.0.0",
+    "express": "^3.4.4",
+    "socket.io": "*",
+    "stylus": "*"
+  }
+}

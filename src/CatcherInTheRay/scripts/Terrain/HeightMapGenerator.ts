@@ -2,52 +2,44 @@
 // Modified by Alex
 
 module TERRAIN {
-    export interface HeightMapGeneratorParams {
-        displayCanvas?: boolean;
-        postgen?: any[];
-        effect?: any[];
-        filter?: FILTERS.ICanvasFilter[];
-        minHeight?: number;
-        maxHeight?: number;
-        width?: number;
-        height?: number;
+    export interface HeightMapGeneratorParams extends NoiseParameters {
         destructionLevel?: number;
-        subdivisions?: number;
-        param?: number;
-        random?: IRandomProvider;
         pathTopOffset?: number;
         pathBottomOffset?: number;
         shrink?: number;
         eqFactor?: number;
+        heightmap?: string;
     }
 
     export class HeightMapGenerator {
         public Parameters: HeightMapGeneratorParams;
-        public Canvas: HTMLCanvasElement;    
+        public Canvas: HTMLCanvasElement;
 
         constructor(params: HeightMapGeneratorParams) {
             this.Parameters = params;
+            this.Canvas = CreateCanvas(params.width, params.height, true, "mainNoiseCanvas", c=> {
+                c.style.display = "none";
+            });
         }
 
         GenerateHeightMap(): HTMLCanvasElement{
-            var random = this.Parameters.random;
+            if (this.Parameters.heightmap) {
+                var image = new Image(this.Canvas.width, this.Canvas.height);
+                image.src = this.Parameters.heightmap;
+                var ctx = this.Canvas.getContext("2d");
+                ctx.drawImage(image, 0, 0);
+                return this.Canvas;
+            }
 
-            var noiseGenerator = new ComplexNoiseGenerator({
-                width: this.Parameters.width,
-                height: this.Parameters.height,
-                displayCanvas: this.Parameters.displayCanvas,
-                minHeight: this.Parameters.minHeight,
-                maxHeight: this.Parameters.maxHeight,
-                subdivisions: this.Parameters.subdivisions,
-                steps: []
-            });
+            var random = this.Parameters.random;
+            var noiseGenerator = new ComplexNoiseGenerator();
 
             // Generate noise
             noiseGenerator.AddStep(tg => {
                 var noiseGen = new PerlinNoiseGenerator({
-                    displayCanvas: tg.Parameters.displayCanvas,
-                    height: tg.Parameters.height,
-                    width: tg.Parameters.width,
+                    displayCanvas: this.Parameters.displayCanvas,
+                    height: this.Parameters.height,
+                    width: this.Parameters.width,
                     random: random,
                     param: this.Parameters.param || 1.1
                 });
@@ -131,18 +123,18 @@ module TERRAIN {
                 var engraveDestruction = new FILTERS.DarknessCopyFilter(FILTERS.Upscale(snCanvas, this.Parameters.width, this.Parameters.height));
                 var engravePath = new FILTERS.DarknessCopyFilter(FILTERS.Upscale(pathCanvas, this.Parameters.width, this.Parameters.height));
 
-                copyNoise.Apply(tg.Canvas);
-                engraveDestruction.Apply(tg.Canvas);
-                histogramEqualizer.Apply(tg.Canvas);
-                softBlur.Apply(tg.Canvas);
-                engravePath.Apply(tg.Canvas);
+                copyNoise.Apply(tg.OutCanvas);
+                engraveDestruction.Apply(tg.OutCanvas);
+                histogramEqualizer.Apply(tg.OutCanvas);
+                softBlur.Apply(tg.OutCanvas);
+                engravePath.Apply(tg.OutCanvas);
 
                 return true;
             }, "Noise compositing");
 
             // Fire the chain
             Trace("Terrain");
-            var noise = noiseGenerator.Generate();
+            var noise = noiseGenerator.GenerateOn(this.Canvas);
             Trace("Terrain");
 
             return noise;

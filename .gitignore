@@ -215,6 +215,7 @@ pip-log.txt
 .mr.developer.cfg
 
 #OWN
+**/node_modules/**
 node_modules/
 
 node_modules/**/

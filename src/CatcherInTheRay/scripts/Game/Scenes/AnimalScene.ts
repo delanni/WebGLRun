@@ -56,7 +56,7 @@ module GAME {
                     (function () {
                         var animal = animalNames[i];
                         var index = i;
-                        loader.ImportMesh([animal], "models/", animal + ".babylon", scene, x=> {
+                        loader.ImportMesh([animal], "/models/", animal + ".babylon", scene, x=> {
                             console.log(animal, x);
                             var _animal = animal;
                             console.log(_animal + " loaded.");

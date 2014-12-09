@@ -1,4 +1,5 @@
-﻿function CreateCanvas(inWidth: number, inHeight: number, debug: boolean = false, id: string=undefined): HTMLCanvasElement {
+﻿
+function CreateCanvas(inWidth: number, inHeight: number, debug: boolean = false, id: string= undefined, preAddModifications:(canvas: HTMLCanvasElement) =>void =undefined): HTMLCanvasElement {
     var canvas = document.createElement("canvas");
     if (id) {
         canvas.id = id;
@@ -6,6 +7,11 @@
     canvas.classList.add("DEBUG");
     canvas.width = inWidth;
     canvas.height = inHeight;
+
+    if (preAddModifications) {
+        preAddModifications(canvas);
+    }
+
     if (debug) {
         document.body.appendChild(canvas);
     }

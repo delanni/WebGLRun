@@ -13,105 +13,6 @@
         ScalingVector: BABYLON.Vector3;
     }
 
-    var MODEL_ANIMATIONS: { [modelName: string]: ICharacterModelDictionary; } = {
-        "fox": {
-            RUN: {
-                start: 1, end: 11, speed: 12, repeat: true
-            },
-            STAY: {
-                start: 0, end: 1, speed: 0, repeat: false
-            },
-            JUMP: {
-                start: 5, end: 9, speed: 16, repeat: false
-            },
-            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
-        },
-        "wolf": {
-            RUN: {
-                start: 1, end: 14, speed: 14, repeat: true
-            },
-            STAY: {
-                start: 0, end: 1, speed: 0, repeat: false
-            },
-            JUMP: {
-                start: 5, end: 11, speed: 14, repeat: false
-            },
-            ScalingVector: BABYLON.Vector3.FromArray([0.10, 0.10, 0.10])
-        },
-        "moose": {
-            RUN: {
-                start: 1, end: 15, speed: 12, repeat: true
-            },
-            STAY: {
-                start: 0, end: 1, speed: 0, repeat: false
-            },
-            JUMP: {
-                start: 7, end: 11, speed: 14, repeat: false
-            },
-            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
-        },
-        "deer": {
-            RUN: {
-                start: 1, end: 16, speed: 16, repeat: true
-            },
-            STAY: {
-                start: 0, end: 1, speed: 0, repeat: false
-            },
-            JUMP: {
-                start: 1, end: 11, speed: 14, repeat: false
-            },
-            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
-        },
-        "elk": {
-            RUN: {
-                start: 1, end: 15, speed: 12, repeat: true
-            },
-            STAY: {
-                start: 0, end: 1, speed: 0, repeat: false
-            },
-            JUMP: {
-                start: 1, end: 4, speed: 14, repeat: false
-            },
-            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
-        },
-        "mountainlion": {
-            RUN: {
-                start: 1, end: 13, speed: 12, repeat: true
-            },
-            STAY: {
-                start: 0, end: 1, speed: 0, repeat: false
-            },
-            JUMP: {
-                start: 1, end: 5, speed: 14, repeat: false
-            },
-            ScalingVector: BABYLON.Vector3.FromArray([0.15, 0.15, 0.15])
-        },
-        "chowchow": {
-            RUN: {
-                start: 1, end: 13, speed: 12, repeat: true
-            },
-            STAY: {
-                start: 0, end: 1, speed: 0, repeat: false
-            },
-            JUMP: {
-                start: 5, end: 10, speed: 14, repeat: false
-            },
-            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
-        },
-        "goldenRetreiver": {
-            RUN: {
-                start: 1, end: 12, speed: 12, repeat: true
-            },
-            STAY: {
-                start: 0, end: 1, speed: 0, repeat: false
-            },
-            JUMP: {
-                start: 2, end: 7, speed: 14, repeat: false
-            },
-            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
-        }
-    }
-
     export class Player {
         INTERSECTION_TRESHOLD: number = 4;
         BASE_ACCELERATION: number = 2;
@@ -122,17 +23,18 @@
         MAXVECTOR: BABYLON.Vector3 = new BABYLON.Vector3(2, 10, 2);
         GRAVITY: BABYLON.Vector3 = new BABYLON.Vector3(0, -0.15, 0);
 
-        _mesh: BABYLON.Mesh;
+        mesh: BABYLON.Mesh;
+        parent: BABYLON.Mesh;
+
         _animationObject: BABYLON.Animation;
-        _parent: BABYLON.Mesh;
         _scene: BABYLON.Scene;
         _bottomVector: BABYLON.Vector3;
         _ray: BABYLON.Ray;
         _ground: BABYLON.Mesh;
 
-        _acceptedKeys: {} = { "32": 32, "87": 87, "68": 68, "83": 83, "65": 65 };
-        _keys: any = { "32": 0, "87": 0, "68": 0, "83": 0, "65": 0 };
+        Controller: any = { "32": 0, "87": 0, "68": 0, "83": 0, "65": 0, "82": 0 };
         _landTime: number = 0;
+        _lastRescueTime: number = 0;
         CurrentRotation: number = 0;
 
         modelProperties: ICharacterModelDictionary;
@@ -143,25 +45,15 @@
         velocity: BABYLON.Vector3;
         isOnGround: boolean;
 
+        IsEnabled: boolean = false;
 
-        constructor(mesh: BABYLON.Mesh, ground: BABYLON.Mesh, scene: BABYLON.Scene) {
+        public SetEnabled(value: boolean) {
+            this.IsEnabled= value
+        }
+
+        constructor(scene: BABYLON.Scene, ground: BABYLON.Mesh) {
             this._scene = scene;
             this._ground = ground;
-            this._mesh = mesh;
-            this._parent = Cast<BABYLON.Mesh>(mesh.parent);
-
-
-            // animation stuff
-            this.modelProperties = MODEL_ANIMATIONS[this._mesh.id];
-            this._animationObject = this._mesh.animations[0];
-            Cast<any>(this._mesh).__defineSetter__("vertexData", (val) => {
-                this._mesh.setVerticesData("position", val);
-            });
-            this._mesh.scaling = this.modelProperties.ScalingVector;
-
-            //debug
-            Cast<any>(this._mesh).player = this;
-            Cast<any>(window).player = this;
 
             this._bottomVector = new BABYLON.Vector3(0, -5, 0);
             this._ray = new BABYLON.Ray(null, new BABYLON.Vector3(0, -1, 0));
@@ -169,64 +61,75 @@
             this.rotationMatrix = new BABYLON.Matrix();
             this.velocity = BABYLON.Vector3.Zero();
             this.isOnGround = false;
+        }
 
-            var boundingInfo = this._mesh.getBoundingInfo();
-            this._parent.checkCollisions = true;
-            this._parent.rotationQuaternion = new BABYLON.Quaternion(0, 0, 0, 1);
+        public Initialize(mesh: BABYLON.Mesh) {
+            this.mesh = mesh;
+            this.parent = Cast<BABYLON.Mesh>(mesh.parent);
 
-            scene.getPhysicsEngine()._unregisterMesh(this._mesh);
-            scene.registerBeforeRender(() => {
-                var lastFrame = scene.getLastFrameDuration();
-
-                this._ray.origin = this._parent.position.add(this._bottomVector);
-                var intersection = this._ground.intersects(this._ray);
-                if (!this._keys[32] && intersection.hit && intersection.distance < this.INTERSECTION_TRESHOLD) {
-                    this._parent.position.y = intersection.pickedPoint.y - this._bottomVector.y;
-                    this.velocity.y = 0;
-                    if (!this.isOnGround) {
-                        this.isOnGround = true;
-                        this._landTime = Date.now();
-                        this.stopAnimation();
-                    }
-                } else {
-                    this.velocity.addInPlace(this.GRAVITY);
-                }
-
-                this.readKeys();
-                this.velocity = BABYLON.Vector3.Clamp(this.velocity, this.MINVECTOR, this.MAXVECTOR);
-
-                if (this.velocity.length() > 0.001) {
-                    this._parent.rotationQuaternion.toRotationMatrix(this.rotationMatrix);
-                    this._parent.moveWithCollisions(BABYLON.Vector3.TransformCoordinates(this.velocity, this.rotationMatrix));
-                } else {
-                    this.velocity.scaleInPlace(0);
-                }
-
-                if (this.isOnGround) {
-                    this.velocity.scaleInPlace(0.8);
-                }
+            // animation stuff
+            this.modelProperties = MODEL_ANIMATIONS[this.mesh.id];
+            this._animationObject = this.mesh.animations[0];
+            Cast<any>(this.mesh).__defineSetter__("vertexData", (val) => {
+                this.mesh.setVerticesData("position", val);
             });
+            this.mesh.scaling = this.modelProperties.ScalingVector;
 
-            window.addEventListener("keydown", evt=> {
-                if (evt.keyCode in this._acceptedKeys) {
-                    if (this._keys[evt.keyCode] === 0) {
-                        this._keys[evt.keyCode] = 1;
-                    }
-                    evt.preventDefault();
+            var boundingInfo = this.mesh.getBoundingInfo();
+            this.parent.checkCollisions = true;
+            this.parent.rotationQuaternion = new BABYLON.Quaternion(0, 0, 0, 1);
+
+            this._scene.getPhysicsEngine()._unregisterMesh(this.mesh);
+            this._scene.registerBeforeRender(()=>this._gameLoop());
+        }
+
+        _lastUpdateTime :number = 0;
+        public pushUpdate(positionData: any) {
+            //basic
+            if (positionData[3] > this._lastUpdateTime) {
+                this._lastUpdateTime = positionData[3];
+                this.velocity.copyFromFloats.apply(this.velocity,positionData[2]);
+                this.parent.rotationQuaternion.copyFromFloats.apply(this.parent.rotationQuaternion,positionData[1]);
+                this.parent.position.copyFromFloats.apply(this.parent.position,positionData[0]);
+            }
+        }
+
+        private _gameLoop = function(){
+            var lastFrame = this._scene.getLastFrameDuration();
+
+            this._ray.origin = this.parent.position.add(this._bottomVector);
+            var intersection = this._ground.intersects(this._ray);
+            if (!this.Controller[32] && intersection.hit && intersection.distance < this.INTERSECTION_TRESHOLD) {
+                this.parent.position.y = intersection.pickedPoint.y - this._bottomVector.y;
+                this.velocity.y = 0;
+                if (!this.isOnGround) {
+                    this.isOnGround = true;
+                    this._landTime = Date.now();
+                    this.stopAnimation();
                 }
-            });
-            window.addEventListener("keyup", evt=> {
-                if (evt.keyCode in this._acceptedKeys) {
-                    this._keys[evt.keyCode] = 0;
-                    evt.preventDefault();
-                }
-            });
+            } else {
+                this.velocity.addInPlace(this.GRAVITY);
+            }
+
+            this.ReadKeys(this.Controller);
+            this.velocity = BABYLON.Vector3.Clamp(this.velocity, this.MINVECTOR, this.MAXVECTOR);
+
+            if (this.velocity.length() > 0.001) {
+                this.parent.rotationQuaternion.toRotationMatrix(this.rotationMatrix);
+                this.parent.moveWithCollisions(BABYLON.Vector3.TransformCoordinates(this.velocity, this.rotationMatrix));
+            } else {
+                this.velocity.scaleInPlace(0);
+            }
+
+            if (this.isOnGround) {
+                this.velocity.scaleInPlace(0.8);
+            }
         }
 
         public Jump(power: number) {
             if (Date.now() - this._landTime < this.LAND_COOLDOWN) return;
             this.velocity.y = (this.BASE_JUMP_POW * power);
-            this._parent.position.y += 1.5;
+            this.parent.position.y += (1.5 * power * power);
             this.startAnimation("JUMP");
             this.isOnGround = false;
         }
@@ -234,6 +137,26 @@
         public Accelerate(factor: number) {
             this.startAnimation("RUN");
             this.velocity.z -= (factor * this.BASE_ACCELERATION);
+        }
+
+        public Rescue() {
+            if (Date.now() - this._lastRescueTime< 5000) return;
+            var down = BABYLON.Vector3.Up().negate();
+            for (var i = 0; i < 16; i++) {
+                var x = i* 5 * Math.sin(i*Math.PI/2);
+                var z = i* 5 * Math.cos(i*Math.PI/2);
+                var cranePos = this.parent.position.add(new BABYLON.Vector3(x, 50, z));
+                var ray = new BABYLON.Ray(cranePos, down);
+                var intersect = this._ground.intersects(ray);
+                if (intersect.hit && intersect.pickedPoint.y < 5) {
+                    this._lastRescueTime = Date.now();
+                    this.isOnGround = true; //slowfall
+                    this.stopAnimation();
+                    this.velocity.scaleInPlace(0);
+                    this.parent.position = cranePos;
+                    break;
+                }
+            }
         }
 
         public RotateTo(targetRot: number) {
@@ -254,31 +177,31 @@
             if (Math.abs(diff) > Math.PI / 10) {
                 diff /= this.ROTATION_APPROXIMATOR;
             }
-            this._parent.rotate(BABYLON.Axis.Y, diff, BABYLON.Space.LOCAL);
+            this.parent.rotate(BABYLON.Axis.Y, diff, BABYLON.Space.LOCAL);
             this.CurrentRotation += diff;
 
         }
 
-        private readKeys() {
-
-            if (this._keys[32] > 0) {
+        public ReadKeys(keys : any) {
+            if (!this.IsEnabled) return; 
+            if (keys[32] > 0) {
                 if (this.isOnGround) {
                     this.Jump(1);
-                    delete this._keys[32];
+                    delete keys[32];
                 } else if (Date.now() - this._landTime > 3000) {
                     // unstuck
                     this._landTime = Date.now();
                     this.Jump(1.5);
-                    delete this._keys[32];
+                    delete keys[32];
                 }
             }
             if (this.isOnGround || true) {
                 var start = { x: 0, y: 0 };
 
-                if (this._keys[87]) start.y += 1; //w
-                if (this._keys[83]) start.y -= 1; //s
-                if (this._keys[65]) start.x += 1; //a
-                if (this._keys[68]) start.x -= 1; //d 
+                if (keys[87]) start.y += 1; //w
+                if (keys[83]) start.y -= 1; //s
+                if (keys[65]) start.x += 1; //a
+                if (keys[68]) start.x -= 1; //d 
 
                 var result = (start.x + 1) * 10 + (start.y + 1);
                 switch (result) {
@@ -319,6 +242,10 @@
                         break;
                 }
             }
+            if (keys[82]) {
+                this.Rescue();
+                delete keys[82];
+            }
         }
 
         private startAnimation(animationKey: string, force?: boolean) {
@@ -329,7 +256,7 @@
 
             var animationProps = Cast<ICharaceterAnimationProperties>(this.modelProperties[animationKey]);
             this.currentAnimation = this._scene.beginAnimation(
-                this._mesh, animationProps.start, animationProps.end, animationProps.repeat, animationProps.speed);
+                this.mesh, animationProps.start, animationProps.end, animationProps.repeat, animationProps.speed);
             this.currentAnimationName = animationKey;
         }
 

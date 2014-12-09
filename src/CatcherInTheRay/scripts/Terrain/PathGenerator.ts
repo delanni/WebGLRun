@@ -1,10 +1,10 @@
 ﻿module TERRAIN {
     export class PathGenerator {
 
-        r: IRandomProvider;
+        random: IRandomProvider;
 
         constructor(random: IRandomProvider) {
-            this.r = random;
+            this.random = random;
         }
 
         /**
@@ -47,7 +47,7 @@
                 intermediatePoints.push([from[0] + dx * i, from[1] + dy * i]);
             }
             for (var i = 0; i < ITERATIONS; i++) {
-                var randomElement = intermediatePoints[Math.floor(this.r.Random() * intermediatePoints.length)];
+                var randomElement = intermediatePoints[Math.floor(this.random.Random() * intermediatePoints.length)];
                 var offset = (i % 2) ? normal : abnormal;
                 randomElement[0] += offset[0];
                 randomElement[1] += offset[1];
@@ -57,86 +57,6 @@
             }
 
             ctrlPoints.push(to, to);
-            return ctrlPoints;
-        }
-
-        /**
-        * This is a generator who generates a path.
-        **/
-        _GeneratePath(canvas: HTMLCanvasElement, from, to): any[] {
-            // preparing defaults 
-
-            from = from && [from] || [from, from];
-            to = to && [to] || [to, to];
-            from[0] = from[0] || 0;
-            to[0] = to[0] || canvas.width;
-            from[1] = from[1] || canvas.height;
-            to[1] = to[1] || 0;
-
-            // Steps for grading, higher the value, less the curves
-            var STEP = 1;
-            // Total steps to take 
-            var steps = (canvas.height / STEP) | 0;
-
-            // The general direction of the path
-            var dx = (to[0] - from[0]) / steps;
-            var dy = (to[1] - from[1]) / steps;
-
-            // The normalof the direction
-            var normal = [-dy, dx];
-
-            // Magnitude of the normal
-            var m = Math.sqrt(Math.pow(normal[0], 2) + Math.pow(normal[1], 2));
-            // Scaling it back to unit
-            normal[0] /= m; normal[1] /= m;
-
-            // The maximum offsetting from the path's line
-            var offset = 100;
-
-            var lastPinLength = 0;
-            var lastPinIndex = -80000;
-            var diagonalPoints = [];
-            var ctrlPoints = [];
-            ctrlPoints.push(from);
-            ctrlPoints.push(from);
-
-            // TODO: change this from step based iteration to pixel based
-            for (var i = 0; i < steps; i++) {
-                // Each step, we push another point by the diagonal's vector
-                diagonalPoints.push([from[0] + dx * i, from[1] + dy * i, 0]);
-
-                // sometimes...
-                if (this.r.Random() > 0.90
-                // we had at least 10 steps since the last pin
-                    && Math.abs(i - lastPinIndex) > 10
-                // we are at least 10 steps away from the edges
-                    && Math.abs(i - canvas.height) > 10
-                    && Math.abs(i) > 10) {
-                    // we put a pin
-                    lastPinIndex = i;
-                    // of length offset/2 tops, for one direction 
-                    var l = this.r.Random() * offset - offset / 2;
-                    // and if this pin is too different from the last one
-                    if (Math.abs(l - lastPinLength) > offset * 0.5
-                        && l * lastPinLength < 0) {
-                        // we flip it
-                        l *= -1;
-                    }
-                    lastPinLength = l;
-
-                    // Multiply our normal with the pin's length, so the pin will stand atop the diagonal
-                    var offsetX = normal[0] * l;
-                    var offsetY = normal[1] * l;
-
-                    // And the control point will be at the end of the pin
-                    var p = [from[0] + dx * i + offsetX, from[1] + dy * i + offsetY];
-                    ctrlPoints.push(p);
-                }
-
-            }
-            ctrlPoints.push(diagonalPoints[diagonalPoints.length - 1]);
-            ctrlPoints.push(diagonalPoints[diagonalPoints.length - 1]);
-
             return ctrlPoints;
         }
 

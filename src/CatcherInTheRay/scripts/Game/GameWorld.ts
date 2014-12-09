@@ -1,4 +1,8 @@
+///<reference path="../declarations/socket.io-client.d.ts" />
+
 module GAME {
+    export var ACCEPTED_KEYS: {} = { "32": 32, "87": 87, "68": 68, "83": 83, "65": 65, "82": 82 };
+
     export class GameWorld {
         _engine: BABYLON.Engine;
         _scene: BABYLON.Scene;
@@ -6,20 +10,29 @@ module GAME {
         _canvas: HTMLCanvasElement;
         _gui: GUI;
         _lights: BABYLON.Light[];
-
+        _socket: SocketIOClient.Socket;
+        //_players: { [name: string]: Player }
+        //_players: Player[];
         _scenes: { [name: string]: SCENES.SceneBuilder } = {};
+
+        player: Player;
+        enemy: Player;
+
+        sceneBuilder: GAME.SCENES.GameScene;
 
         /// DEFAULTS ARE HERE ///
         private random = new MersenneTwister(111);
-        _defaults: GameProperties = {
-            _sceneId: GAME.Scenes.GAME,
-            _gameParameters: {
-                randomSeed: 111,
-                random: this.random,
+
+        parameters: GameProperties = {
+            sceneId: GAME.Scenes.GAME,
+            gameParameters: {
                 useFlatShading: false,
-                character: "fox"
+                name: ["Bill", "Jeff", "Jorma", "Teddy", "Eilene", "Georgie"][Math.floor(Math.random() * 6)],
+                character: ["elk", "fox", "chowchow", "deer", "wolf", "mountainlion"][Math.floor(Math.random() * 6)],
+                isHost: false
             },
-            _mapParameters: {
+            mapParameters: {
+                randomSeed: 111,
                 destructionLevel: 13,
                 displayCanvas: false,
                 height: 1500,
@@ -36,41 +49,181 @@ module GAME {
             }
         };
 
-        constructor(canvasId: string, fullify?: string) {
-            BABYLON.Engine.ShadersRepository = "scripts/Shaders/";
+        constructor(canvasId: string, parameters: GameProperties, socket: SocketIOClient.Socket, fullify?: string) {
+            BABYLON.Engine.ShadersRepository = "/scripts/Shaders/";
 
+            this._socket = socket;
             this._canvas = Cast<HTMLCanvasElement>(document.getElementById(canvasId));
             this._engine = new BABYLON.Engine(this._canvas);
-            this._scene = new BABYLON.Scene(this._engine);
-            this._camera = new BABYLON.FreeCamera("Camera", new BABYLON.Vector3(0, 250, 0), this._scene);
-            this._camera.attachControl(this._canvas);
-
 
             if (fullify) {
                 this.extendCanvas(FullifyStates.HARD);
             }
 
-            this._gui = new GUI(this);
+            if (!parameters || !(parameters instanceof Object)) {
+                this._gui = new GUI(this);
+            } else {
+                UTILS.Mixin(parameters, this.parameters, false);
+            }
 
-            this.buildScenes(this._defaults);
+            this.appendHandlers(this._socket);
+        }
 
+        public Load(properties: GameProperties) {
+            properties = UTILS.Mixin(properties, this.parameters, false);
+            var random = new MersenneTwister(properties.mapParameters.randomSeed);
+            properties.mapParameters.random = random;
+            this._engine.displayLoadingUI().then(() => {
+                this.applyParameters(properties);
+                this.loadScene(properties.sceneId);
+                if (this.parameters.gameParameters.isHost) {
+                    var c = <HTMLCanvasElement>document.getElementById("mainNoiseCanvas");
+                    var dataurl = c.toDataURL();
+                    this._socket.emit("mapLoaded", { timestamp: Date.now(), heightmap: dataurl });
+                } else {
+                    this._socket.emit("mapLoaded", { timestamp: Date.now() });
+                }
+                this._engine.hideLoadingUI();
+                this.hookKeyboardTo(this.sceneBuilder.player.Controller);
+                this.player = this.sceneBuilder.player;
+            });
+        }
+
+        private hookSocketTo(controller: any) {
+            var socket = this._socket;
+
+            socket.on("keydown", evt=> {
+                if (evt.keyCode in ACCEPTED_KEYS) {
+                    if (controller[evt.keyCode] === 0) {
+                        controller[evt.keyCode] = 1;
+                    }
+                }
+            });
+            socket.on("keyup", evt=> {
+                if (evt.keyCode in ACCEPTED_KEYS) {
+                    controller[evt.keyCode] = 0;
+                }
+            });
+        }
+
+        private hookKeyboardTo(controller: any) {
+            window.addEventListener("keydown", evt=> {
+                if (evt.keyCode in ACCEPTED_KEYS) {
+                    this._socket.emit("keydown", { keyCode: evt.keyCode });
+                    if (controller[evt.keyCode] === 0) {
+                        controller[evt.keyCode] = 1;
+                    }
+                    evt.preventDefault();
+                }
+            });
+            window.addEventListener("keyup", evt=> {
+                if (evt.keyCode in ACCEPTED_KEYS) {
+                    this._socket.emit("keyup", { keyCode: evt.keyCode });
+                    controller[evt.keyCode] = 0;
+                    evt.preventDefault();
+                }
+            });
+        }
+
+        private appendHandlers(socket: SocketIOClient.Socket) {
+            socket.on("welcome", x=> {
+                console.log("Successfully logged in at " + x.timestamp);
+                socket.emit("gladICouldJoin", {
+                    name: this.parameters.gameParameters.name,
+                    character: this.parameters.gameParameters.character
+                });
+                // this is info about me
+                window.postMessage({
+                    playerInfo: { name: this.parameters.gameParameters.name }
+                }, window.location.href);
+            });
+
+            socket.on("playerJoined", playerInfo=> {
+                var enemy = this.sceneBuilder.CreateEnemy(playerInfo.character);
+                this.hookSocketTo(enemy.Controller);
+                this.enemy = enemy;
+
+                // this is info about the enemigo
+                window.postMessage({
+                    playerInfo: { name: playerInfo.name }
+                }, window.location.href);
+            });
+
+            socket.on("enemyPositionUpdate", positionInfo=> {
+                this.enemy.pushUpdate(positionInfo);
+            });
+
+            socket.on("ping", x=> {
+                socket.emit("pong", { timestamp: Date.now() });
+            });
+
+            socket.on("pong", x=> {
+                console.log("pong", x);
+            });
+
+            socket.on("startGame", x=> {
+                var timeout = x.timeout;
+                setTimeout(() => {
+                    this.Start();
+                }, timeout);
+                setTimeout(() => {
+                    this.countdown(timeout);
+                }, 0);
+                this.startRenderLoop();
+            });
+        }
+        _lastPositionUpdate: number = 0;
+
+        private startRenderLoop() {
+			this._scene.registerBeforeRender(() => {
+                var now = Date.now();
+                if (now - this._lastPositionUpdate > 1000) {
+                    this._lastPositionUpdate = now;
+                    this._socket.emit("positionUpdate",
+                        [
+                            this.player.parent.position.asArray(),
+                            this.player.parent.rotationQuaternion.asArray(),
+                            this.player.velocity.asArray(),
+                            now
+                        ]);
+                }
+            });
             BABYLON.Tools.QueueNewFrame(() => this.renderLoop());
         }
 
-        applyGuiParams(guiParams: GameProperties) {
+        public Start() {
+            console.info("Started!");
+            this.player && this.player.SetEnabled(true);
+            this.enemy && this.enemy.SetEnabled(true);
+        }
+
+        private countdown(timeoutms: number) {
+            console.info("Game starts in " + timeoutms / 1000 + "!");
+            window.postMessage({
+                timeoutms: timeoutms
+            }, window.location.href);
+            if (timeoutms >= 0) {
+                setTimeout(() => {
+                    this.countdown(timeoutms - 1000);
+                }, 1000);
+            }
+        }
+
+        private applyParameters(guiParams: GameProperties) {
             this.buildScenes(guiParams);
         }
 
-        buildScenes(parameters: GameProperties) {
-            switch (parameters._sceneId){
-                case Scenes.TEST: 
+        private buildScenes(parameters: GameProperties) {
+            switch (parameters.sceneId) {
+                case Scenes.TEST:
                     var testScene = new SCENES.TestScene(this);
                     this._scenes["TEST"] = testScene;
                     break;
-                
+
                 case Scenes.GAME:
                     var gameScene = new SCENES.GameScene(this,
-                        parameters._gameParameters, parameters._mapParameters);
+                        parameters.gameParameters, parameters.mapParameters);
+                    this.sceneBuilder = gameScene;
                     this._scenes["GAME"] = gameScene;
                     break;
                 case Scenes.ANIMAL:
@@ -78,13 +231,13 @@ module GAME {
                     this._scenes["ANIMAL"] = animalScene;
                     break;
                 case Scenes.TERRAINGEN:
-                    var terrainGenScene = new SCENES.TerrainGenScene(this, parameters._gameParameters, parameters._mapParameters);
+                    var terrainGenScene = new SCENES.TerrainGenScene(this, parameters.gameParameters, parameters.mapParameters);
                     this._scenes["TERRAINGEN"] = terrainGenScene;
                     break;
             }
         }
 
-        extendCanvas(fullify: FullifyStates) {
+        private extendCanvas(fullify: FullifyStates) {
             var parent = this._canvas.parentElement;
             if (fullify == FullifyStates.NO) return;
 
@@ -103,72 +256,18 @@ module GAME {
             resize();
         }
 
-        gameLoop() {
-            this.triggerTicksOnAllEntities();
-            this.collisionLoop();
-        }
-
-        renderLoop() {
+        private renderLoop() {
             this._engine.beginFrame();
-            this._scene.render();
+            if (this._scene) {
+                this._scene.render();
+            }
             this._engine.endFrame();
             BABYLON.Tools.QueueNewFrame(() => this.renderLoop());
         }
 
-        triggerTicksOnAllEntities() {
-            //for (var i = 0; i < this.entities.length; i++) {
-            //    if (this.entities[i].tick) {
-            //        this.entities[i].tick();
-            //    }
-            //}
-        }
-
-        collisionLoop() {
-            var behaviorsCollection = [];
-
-            // First loop is testing all possibles collisions
-            // and build a behaviors collisions collections to be called after this
-            //for (var i = 0; i < this.entitiesRegisterCollision.length; i++) {
-            //    for (var j = 0; j < this.entities.length; j++) {
-            //        if ((this.entities[j]._hasCollisions) && (this.entities[j] != this.entitiesRegisterCollision[i])) {
-            //            // Pure intersection on 3D Meshes
-            //            if (this.entitiesRegisterCollision[i]._mesh.intersectsMesh(this.entities[j]._mesh, false)) {
-            //                behaviorsCollection.push({ registeredEntity: this.entitiesRegisterCollision[i], targetEntity: this.entities[j] });
-            //            }
-
-            //            // Extends 3D collision with a custom behavior (used for particules emitted for instance) 
-            //            if (this.entitiesRegisterCollision[i]._descendantsCollision) {
-            //                var descendants = this.entitiesRegisterCollision[i]._mesh.getDescendants();
-            //                for (var k = 0; k < descendants.length; k++) {
-            //                    if (descendants[k].intersectsMesh(this.entities[j]._mesh, false)) {
-            //                        behaviorsCollection.push({ registeredEntity: this.entitiesRegisterCollision[i], targetEntity: this.entities[j], descendants: descendants[k] });
-            //                    }
-            //                }
-            //            }
-
-            //            //Intersects Behaviors
-            //            var intersectBehavior = this.entitiesRegisterCollision[i].intersectBehavior(this.entities[j]);
-            //            if (intersectBehavior.value) {
-            //                behaviorsCollection.push({ registeredEntity: this.entitiesRegisterCollision[i], targetEntity: this.entities[j], tag: intersectBehavior.tag });
-            //            }
-            //        }
-            //    }
-            //}
-
-            //// Asking to each entity to apply its collision behavior
-            //for (var k = 0; k < behaviorsCollection.length; k++) {
-            //    if ((behaviorsCollection[k].registeredEntity) != null)
-            //        behaviorsCollection[k].registeredEntity.collisionBehavior(behaviorsCollection[k].targetEntity, behaviorsCollection[k]);
-            //    if ((behaviorsCollection[k].targetEntity) != null)
-            //        behaviorsCollection[k].targetEntity.collisionBehavior(behaviorsCollection[k].registeredEntity, behaviorsCollection[k]);
-            //}
-
-            //behaviorsCollection = [];
-        }
-
-        loadScene(s: Scenes) {
+        private loadScene(s: Scenes) {
             var debugItems = document.getElementsByClassName("DEBUG");
-            for (var i = 0; debugItems.length>0;) {
+            for (var i = 0; debugItems.length > 0;) {
                 debugItems[i].parentNode.removeChild(debugItems[i]);
             }
 
@@ -182,14 +281,10 @@ module GAME {
                 case Scenes.ANIMAL:
                     this._scene = this._scenes["ANIMAL"].BuildScene();
                     break;
-                case Scenes.TERRAINGEN: 
+                case Scenes.TERRAINGEN:
                     this._scene = this._scenes["TERRAINGEN"].BuildScene();
                     break;
             }
-
-            this._scene.registerBeforeRender(() => {
-                this.gameLoop();
-            });
         }
     }
 
@@ -204,7 +299,8 @@ module GAME {
         MAIN = 1,
         GAME = 2,
         ANIMAL = 3,
-        TERRAINGEN = 4
+        TERRAINGEN = 4,
+        EXPLORE = 5
     };
 
 }

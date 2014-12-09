@@ -5,11 +5,10 @@
 module TERRAIN {
     export interface NoiseParameters {
         random: IRandomProvider;
-        width?: number;
-        height?: number;
-        canvas?: HTMLCanvasElement;
-        param?: number;
-        displayCanvas?: boolean;
+        width: number;
+        height: number;
+        param: number;
+        displayCanvas: boolean;
     }
 
     export class PerlinNoiseGenerator {
@@ -43,15 +42,7 @@ module TERRAIN {
              * https://gist.github.com/donpark/1796361
              */
 
-            inParameters.param = inParameters.param || 1.1;
-            inParameters.width = inParameters.width || 640;
-            inParameters.height = inParameters.height || 480;
-
-            if (!inParameters.canvas) {
-                inParameters.canvas = CreateCanvas(inParameters.width, inParameters.height, inParameters.displayCanvas);
-            }
-
-            this.Canvas = inParameters.canvas;
+            this.Canvas = CreateCanvas(inParameters.width, inParameters.height, inParameters.displayCanvas); 
             this.Parameters = inParameters;
             this.Random = inParameters.random;
         }

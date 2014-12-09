@@ -18,6 +18,19 @@
   <ItemGroup>
     <Content Include="assets\download.png" />
     <Content Include="assets\noisenormals.jpg" />
+    <Content Include="assets\Profiles\deer.jpg" />
+    <Content Include="assets\Profiles\bear.jpg" />
+    <Content Include="assets\Profiles\bullspiderthing.jpg" />
+    <Content Include="assets\Profiles\mountainlion.jpg" />
+    <Content Include="assets\Profiles\chowchow.jpg" />
+    <Content Include="assets\Profiles\fox.jpg" />
+    <Content Include="assets\Profiles\horse.jpg" />
+    <Content Include="assets\Profiles\keselyu.jpg" />
+    <Content Include="assets\Profiles\moose.jpg" />
+    <Content Include="assets\Profiles\parrot.jpg" />
+    <Content Include="assets\Profiles\elk.jpg" />
+    <Content Include="assets\Profiles\uglydog.jpg" />
+    <Content Include="assets\Profiles\wolf.jpg" />
     <Content Include="assets\rockynoisenormals.jpg" />
     <Content Include="assets\Skybox\skyrender0001.png" />
     <Content Include="assets\Skybox\skyrender0002.png" />
@@ -26,8 +39,10 @@
     <Content Include="assets\Skybox\skyrender0005.png" />
     <Content Include="assets\Skybox\skyrender0006.png" />
     <Content Include="assets\sources.txt" />
-    <Content Include="css\main.css" />
+    <Content Include="css\index.css" />
+    <Content Include="css\play.css" />
     <Content Include="index.html" />
+    <Content Include="play.html" />
     <Content Include="models\chowchow.babylon" />
     <Content Include="models\deer.babylon" />
     <Content Include="models\elk.babylon" />
@@ -39,11 +54,15 @@
     <Content Include="models\tarbuffaloA.babylon" />
     <Content Include="models\vulture.babylon" />
     <Content Include="models\wolf.babylon" />
+    <Content Include="scripts\angularModules.js" />
+    <Content Include="scripts\Lib\angular.min.js" />
     <Content Include="scripts\Lib\babylon.1.14-dbg.js" />
     <Content Include="scripts\Lib\cannon.js" />
     <Content Include="scripts\Lib\dat.gui.js" />
+    <Content Include="scripts\Lib\jquery-2.1.1.min.js" />
     <Content Include="scripts\Lib\oimo.js" />
     <Content Include="scripts\Lib\ourOwnBabylon.js" />
+    <Content Include="scripts\Lib\socket.io-1.2.0.js" />
     <Content Include="scripts\Lib\StackBlur.js" />
     <Content Include="scripts\Shaders\flat.fragment.fx" />
     <Content Include="scripts\Shaders\flat.vertex.fx" />
@@ -71,6 +90,19 @@
     <Content Include="models\bearBlack.babylon" />
     <Content Include="models\goldenRetreiver.babylon" />
     <Content Include="models\moose.babylon" />
+    <Content Include="models\bearBlack.babylon.manifest" />
+    <Content Include="models\chowchow.babylon.manifest" />
+    <Content Include="models\deer.babylon.manifest" />
+    <Content Include="models\elk.babylon.manifest" />
+    <Content Include="models\fox.babylon.manifest" />
+    <Content Include="models\goldenRetreiver.babylon.manifest" />
+    <Content Include="models\horse.babylon.manifest" />
+    <Content Include="models\moose.babylon.manifest" />
+    <Content Include="models\mountainlion.babylon.manifest" />
+    <Content Include="models\parrot.babylon.manifest" />
+    <Content Include="models\tarbuffaloA.babylon.manifest" />
+    <Content Include="models\vulture.babylon.manifest" />
+    <Content Include="models\wolf.babylon.manifest" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
     </None>
@@ -81,13 +113,16 @@
   <ItemGroup>
     <TypeScriptCompile Include="scripts\BabylonExtensions.ts" />
     <TypeScriptCompile Include="scripts\declarations\babylon.d.ts" />
+    <TypeScriptCompile Include="scripts\declarations\socket.io-client.d.ts" />
     <TypeScriptCompile Include="scripts\Filters\BlurFilter.ts" />
     <TypeScriptCompile Include="scripts\Filters\CompositeFilters.ts" />
     <TypeScriptCompile Include="scripts\declarations\StackBlur.d.ts" />
     <TypeScriptCompile Include="scripts\Filters\FILTERS.ts" />
+    <TypeScriptCompile Include="scripts\Game\CharacterProperties.ts" />
     <TypeScriptCompile Include="scripts\Game\GAME.ts" />
     <TypeScriptCompile Include="scripts\Game\Player.ts" />
     <TypeScriptCompile Include="scripts\Game\Scenes\AnimalScene.ts" />
+    <TypeScriptCompile Include="scripts\Game\Scenes\ExploreScene.ts" />
     <TypeScriptCompile Include="scripts\Game\Scenes\Landscape.ts" />
     <TypeScriptCompile Include="scripts\Game\Scenes\GameScene.ts" />
     <TypeScriptCompile Include="scripts\Game\GameWorld.ts" />
@@ -95,7 +130,6 @@
     <TypeScriptCompile Include="scripts\Filters\HistogramEqFilter.ts" />
     <TypeScriptCompile Include="scripts\Filters\ICanvasFilter.ts" />
     <TypeScriptCompile Include="scripts\Game\Scenes\SceneBuilder.ts" />
-    <TypeScriptCompile Include="scripts\Main.ts" />
     <TypeScriptCompile Include="scripts\Terrain\HeightMapGenerator.ts" />
     <TypeScriptCompile Include="scripts\HTMLTools.ts" />
     <TypeScriptCompile Include="scripts\MersenneTwister.ts" />
@@ -128,7 +162,7 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>0</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost:57211/</IISUrl>
+          <IISUrl>http://localhost:56918/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>
@@ -140,12 +174,13 @@
   </ProjectExtensions>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <TypeScriptTarget>ES5</TypeScriptTarget>
-    <TypeScriptRemoveComments>false</TypeScriptRemoveComments>
+    <TypeScriptRemoveComments>True</TypeScriptRemoveComments>
     <TypeScriptSourceMap>False</TypeScriptSourceMap>
     <TypeScriptModuleKind>amd</TypeScriptModuleKind>
     <TypeScriptGeneratesDeclarations>True</TypeScriptGeneratesDeclarations>
     <TypeScriptOutFile>scripts\Lib\compiled.js</TypeScriptOutFile>
     <IncludeIisSettings>true</IncludeIisSettings>
+    <TypeScriptCompileOnSaveEnabled>False</TypeScriptCompileOnSaveEnabled>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <TypeScriptTarget>ES3</TypeScriptTarget>
@@ -154,4 +189,7 @@
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>call $(ProjectDir)copyScriptsAndViews.bat $(ProjectDir) $(SolutionDir)ServerProject\</PostBuildEvent>
+  </PropertyGroup>
 </Project>
