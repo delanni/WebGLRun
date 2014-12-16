@@ -42,6 +42,9 @@
     <Content Include="css\index.css" />
     <Content Include="css\play.css" />
     <Content Include="index.html" />
+    <Content Include="scripts\Shaders\flat.vertex.fx" />
+    <Content Include="scripts\Shaders\weird.vertex.fx" />
+    <Content Include="test.html" />
     <Content Include="play.html" />
     <Content Include="models\chowchow.babylon" />
     <Content Include="models\deer.babylon" />
@@ -57,15 +60,12 @@
     <Content Include="scripts\angularModules.js" />
     <Content Include="scripts\Lib\angular.min.js" />
     <Content Include="scripts\Lib\babylon.1.14-dbg.js" />
-    <Content Include="scripts\Lib\cannon.js" />
     <Content Include="scripts\Lib\dat.gui.js" />
     <Content Include="scripts\Lib\jquery-2.1.1.min.js" />
-    <Content Include="scripts\Lib\oimo.js" />
-    <Content Include="scripts\Lib\ourOwnBabylon.js" />
     <Content Include="scripts\Lib\socket.io-1.2.0.js" />
     <Content Include="scripts\Lib\StackBlur.js" />
     <Content Include="scripts\Shaders\flat.fragment.fx" />
-    <Content Include="scripts\Shaders\flat.vertex.fx" />
+    <Content Include="scripts\Shaders\weird.fragment.fx" />
     <Content Include="tools\models\chopper\goldenRetreiver.js" />
     <Content Include="tools\models\chopper\modelFileChopper.js" />
     <Content Include="tools\models\licence.txt" />
@@ -132,19 +132,16 @@
     <TypeScriptCompile Include="scripts\Game\Scenes\SceneBuilder.ts" />
     <TypeScriptCompile Include="scripts\Terrain\HeightMapGenerator.ts" />
     <TypeScriptCompile Include="scripts\HTMLTools.ts" />
-    <TypeScriptCompile Include="scripts\MersenneTwister.ts" />
+    <TypeScriptCompile Include="scripts\Terrain\MersenneTwister.ts" />
     <TypeScriptCompile Include="scripts\Terrain\PathGenerator.ts" />
     <TypeScriptCompile Include="scripts\Terrain\PerlinNoiseGenerator.ts" />
-    <TypeScriptCompile Include="scripts\references.ts" />
     <TypeScriptCompile Include="scripts\Terrain\TERRAIN.ts" />
     <TypeScriptCompile Include="scripts\Terrain\ComplexNoiseGenerator.ts" />
     <TypeScriptCompile Include="scripts\Game\Scenes\TestScene.ts" />
     <TypeScriptCompile Include="scripts\Terrain\TerrainGenerator.ts" />
     <TypeScriptCompile Include="scripts\Utils.ts" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="scripts\compiled\" />
-  </ItemGroup>
+  <ItemGroup />
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
@@ -176,7 +173,7 @@
     <TypeScriptTarget>ES5</TypeScriptTarget>
     <TypeScriptRemoveComments>True</TypeScriptRemoveComments>
     <TypeScriptSourceMap>False</TypeScriptSourceMap>
-    <TypeScriptModuleKind>amd</TypeScriptModuleKind>
+    <TypeScriptModuleKind>none</TypeScriptModuleKind>
     <TypeScriptGeneratesDeclarations>True</TypeScriptGeneratesDeclarations>
     <TypeScriptOutFile>scripts\Lib\compiled.js</TypeScriptOutFile>
     <IncludeIisSettings>true</IncludeIisSettings>

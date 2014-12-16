@@ -21,7 +21,9 @@ class GUI {
     }
 
     public Reload() {
-        this._gameWorld.Load(this.properties);
+        this._gameWorld.Load(this.properties).then(() => {
+            this._gameWorld.StartRenderLoop();
+        });
     }
 
 

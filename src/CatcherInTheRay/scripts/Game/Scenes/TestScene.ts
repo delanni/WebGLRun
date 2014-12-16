@@ -18,8 +18,19 @@ module GAME {
 
                 torusKnot = BABYLON.Mesh.CreateTorusKnot("torusknot", 3, 2, 80, 30, 4, 4, scene, true);
 
+                var weirdShaderMat = new BABYLON.ShaderMaterial("weirdShader", scene, "weird", {
+                    attributes: ["position", "normal"],
+                    uniforms: ["world", "worldView", "worldViewProjection", "view", "projection"]
+                });
+
+                torusKnot.material = weirdShaderMat;
+
+
+                
+
                 scene.registerBeforeRender(() => {
                     torusKnot.rotate(BABYLON.Vector3.Up(), 0.01, BABYLON.Space.LOCAL);
+                    weirdShaderMat.setFloat("time", (Date.now() / 1000) % (Math.PI*2));
                 });
 
                 return scene;

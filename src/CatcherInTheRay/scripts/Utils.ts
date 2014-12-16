@@ -24,4 +24,29 @@
         }
         return toThis;
     }
+
+    export class Chainable<T> {
+
+        callbacks: Array<(argument: T) => T> = [];
+
+        constructor(followup?: (argument: T) => T) {
+            if (followup) {
+                this.callbacks.push(followup);
+            }
+        }
+
+        public then(followup:(argument:T)=>T): Chainable<T>{
+            this.callbacks.push(followup);
+            return this;
+        }
+
+        public call() {
+            var args = arguments;
+            while (this.callbacks.length) {
+                var callback = this.callbacks.shift();
+                args = callback.apply(callback, args);
+            }
+            return args;
+        }
+    }
 } 

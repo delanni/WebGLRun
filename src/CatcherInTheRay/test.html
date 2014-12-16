@@ -1,0 +1,32 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>PEONHQ - WebGL Runner</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link rel="stylesheet" href="/css/play.css" type="text/css" />
+</head>
+
+<body>
+    <!-- A canvas for the engine, this will be resized if needed -->
+    <div class="mainwrapper">
+        <canvas id="mainCanvas" width="600" height="800"></canvas>
+    </div>
+    <!-- Include all the third party stuff -->
+    <script type="text/javascript" src="/scripts/Lib/dat.gui.js"></script>
+    <script type="text/javascript" src="/scripts/Lib/socket.io-1.2.0.js"></script>
+    <script type="text/javascript" src="/scripts/Lib/babylon.1.14-dbg.js"></script>
+    <script type="text/javascript" src="/scripts/Lib/StackBlur.js"></script>
+    <!--<script type="text/javascript" src="/scripts/Lib/oimo.js"></script>-->
+
+    <!-- Penultimately the compilation result of my .TS files-->
+    <script type="text/javascript" src="/scripts/Lib/compiled.js"></script>
+
+    <!-- Finally the invocation of the game load -->
+    <script>
+        (function (params) {
+            var game = window.game =  new GAME.GameWorld("mainCanvas", params, null, "hard");
+        })();
+    </script>
+</body>
+</html>

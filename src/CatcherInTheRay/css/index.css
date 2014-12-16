@@ -1,13 +1,25 @@
-﻿body {
+﻿@import url(https://fonts.googleapis.com/css?family=Roboto&subset=latin-ext);
+
+body {
     background: #56FF43;
     margin: 0;
-    font-family: Verdana;
+    font-family:'Roboto', sans-serif;
 }
 
 #loginForm {
     background: #56FF43;
     width: 100%;
     border-radius: 4px;
+    box-shadow: 3px 3px 3px #151111;
+}
+
+
+h1{
+    text-align: center;
+    font-size: 3em;
+    text-shadow: 0 0 2px rgb(142, 28, 28);
+    background: #5A9EE8;
+    border-radius: 6px;
     box-shadow: 3px 3px 3px #151111;
 }
 
@@ -27,7 +39,7 @@
     cursor:auto;
 }
 
-.playerCard {
+/*.playerCard {
     background: lightblue;
     box-shadow: -6px 0 0 0 blue, 6px 0 0 0 blue, 0 -2px 0 0 blue, 0 2px 0 0 blue;
     padding: 8px;
@@ -36,7 +48,8 @@
     max-height: 80px;
     margin: 8px;
     overflow: hidden;
-}
+}*/
+
 
 .playerName, .playerScore {
     font-weight: bold;
@@ -70,7 +83,6 @@
 
 .selectButton {
     width: 100%;
-    font-family: Verdana;
     text-align: center;
     background: #5A9EE8;
     padding: 4px 0;

@@ -180,7 +180,7 @@ var outMesh = {
     "checkCollisions": false,
     "billboardMode": 0,
     "receiveShadows": false,
-    "physicsImpostor": 1,
+    "physicsImpostor": 0,
     "physicsMass": 0,
     "physicsFriction": 0,
     "physicsRestitution": 0,

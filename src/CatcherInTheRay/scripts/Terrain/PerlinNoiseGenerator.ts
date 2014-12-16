@@ -4,7 +4,7 @@
 
 module TERRAIN {
     export interface NoiseParameters {
-        random: IRandomProvider;
+        randomSeed: number;
         width: number;
         height: number;
         param: number;
@@ -44,7 +44,7 @@ module TERRAIN {
 
             this.Canvas = CreateCanvas(inParameters.width, inParameters.height, inParameters.displayCanvas); 
             this.Parameters = inParameters;
-            this.Random = inParameters.random;
+            this.Random = new MersenneTwister(this.Parameters.randomSeed);
         }
 
         public Generate(canvas?: HTMLCanvasElement, separateCanvas: boolean= true) {

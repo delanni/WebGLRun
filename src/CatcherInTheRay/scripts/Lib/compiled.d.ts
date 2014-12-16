@@ -114,9 +114,9 @@ declare module GAME {
             _debug: boolean;
             _useFlatShading: boolean;
             _mapParams: TERRAIN.TerrainGeneratorParams;
-            _physicsEngine: BABYLON.OimoJSPlugin;
             _character: string;
-            _flatShader: BABYLON.ShaderMaterial;
+            _flatShaderMat: BABYLON.ShaderMaterial;
+            _weirdShaderMat: BABYLON.ShaderMaterial;
             mainCamera: BABYLON.FollowCamera;
             followPlayer: boolean;
             startOrb: BABYLON.Mesh;
@@ -131,7 +131,8 @@ declare module GAME {
             private putStartAndEnd();
             CreatePlayer(meshName: string): Player;
             CreateEnemy(meshName: string): Player;
-            private createFlatShader();
+            private createShaders();
+            DropCollectibles(): void;
             BuildSceneAround(scene: BABYLON.Scene): BABYLON.Scene;
         }
     }
@@ -151,16 +152,17 @@ declare module GAME {
         };
         player: Player;
         enemy: Player;
-        sceneBuilder: SCENES.GameScene;
+        gameScene: SCENES.GameScene;
         private random;
         parameters: GameProperties;
         constructor(canvasId: string, parameters: GameProperties, socket: SocketIOClient.Socket, fullify?: string);
-        Load(properties: GameProperties): void;
+        Load(properties: GameProperties): UTILS.Chainable<any>;
+        private emit(messageType, args);
         private hookSocketTo(controller);
         private hookKeyboardTo(controller);
         private appendHandlers(socket);
         _lastPositionUpdate: number;
-        private startRenderLoop();
+        StartRenderLoop(): void;
         Start(): void;
         private countdown(timeoutms);
         private applyParameters(guiParams);
@@ -194,6 +196,7 @@ declare module GAME {
         RUN: ICharaceterAnimationProperties;
         STAY: ICharaceterAnimationProperties;
         JUMP: ICharaceterAnimationProperties;
+        REVERSE: ICharaceterAnimationProperties;
         ScalingVector: BABYLON.Vector3;
     }
     class Player {
@@ -202,6 +205,7 @@ declare module GAME {
         BASE_JUMP_POW: number;
         LAND_COOLDOWN: number;
         ROTATION_APPROXIMATOR: number;
+        TIMEFACTOR: number;
         MINVECTOR: BABYLON.Vector3;
         MAXVECTOR: BABYLON.Vector3;
         GRAVITY: BABYLON.Vector3;
@@ -215,6 +219,7 @@ declare module GAME {
         Controller: any;
         _landTime: number;
         _lastRescueTime: number;
+        _lastJumpTime: number;
         CurrentRotation: number;
         modelProperties: ICharacterModelDictionary;
         currentAnimation: BABYLON.Animatable;
@@ -223,17 +228,23 @@ declare module GAME {
         velocity: BABYLON.Vector3;
         isOnGround: boolean;
         IsEnabled: boolean;
+        targetPosition: BABYLON.Vector3;
         SetEnabled(value: boolean): void;
         constructor(scene: BABYLON.Scene, ground: BABYLON.Mesh);
         Initialize(mesh: BABYLON.Mesh): void;
         _lastUpdateTime: number;
+        _latency: number;
         pushUpdate(positionData: any): void;
-        private _gameLoop;
+        _lastFrameFactor: number;
+        _totalFramesDuration: number;
+        _totalFramesCount: number;
+        _lastTickTime: number;
+        private _gameLoop();
         Jump(power: number): void;
-        Accelerate(factor: number): void;
+        Accelerate(force: number): void;
         Rescue(): void;
-        RotateTo(targetRot: number): void;
-        ReadKeys(keys: any): void;
+        RotateTo(rotationDirection: number): void;
+        EvaluateKeyState(keys: any): void;
         private startAnimation(animationKey, force?);
         private stopAnimation();
     }
@@ -253,7 +264,6 @@ declare module GAME {
             _debug: boolean;
             _useFlatShading: boolean;
             _mapParams: TERRAIN.TerrainGeneratorParams;
-            _physicsEngine: BABYLON.OimoJSPlugin;
             _character: string;
             _flatShader: BABYLON.ShaderMaterial;
             mainCamera: BABYLON.FollowCamera;
@@ -349,18 +359,19 @@ declare class MersenneTwister implements IRandomProvider {
 declare module TERRAIN {
     class PathGenerator {
         random: IRandomProvider;
-        constructor(random: IRandomProvider);
-        MakePath(canvas: HTMLCanvasElement, from: any, to: any, opaque?: boolean): HTMLCanvasElement;
-        GeneratePath(canvas: HTMLCanvasElement, from: any, to: any): any[];
+        pathWidth: number;
+        constructor(random: IRandomProvider, pathWidth: number);
+        MakePath(canvas: HTMLCanvasElement, fromX?: number, toX?: number, fromY?: number, toY?: number, opaque?: boolean): HTMLCanvasElement;
+        GenerateControlPoints(canvas: HTMLCanvasElement, fromX?: number, toX?: number, fromY?: number, toY?: number): any[];
         private interpolate(P0, P1, P2, P3, u);
         private drawCatmull(canvas, points, xoffset);
-        private makeCatmull(anchors);
+        MakeCatmull(anchors: any[]): any[];
         private drawPath(canvas, points, clearBeforeDraw);
     }
 }
 declare module TERRAIN {
     interface NoiseParameters {
-        random: IRandomProvider;
+        randomSeed: number;
         width: number;
         height: number;
         param: number;
@@ -374,10 +385,6 @@ declare module TERRAIN {
         constructor(inParameters: NoiseParameters);
         Generate(canvas?: HTMLCanvasElement, separateCanvas?: boolean): HTMLCanvasElement;
     }
-}
-declare module UTILS {
-    function Clamp(scalar: number, min: number, max: number): number;
-    function Mixin(mixThis: any, toThis: any, dontTouchExistingProperties: any): any;
 }
 declare module TERRAIN {
     interface TerrainGeneratorParams extends HeightMapGeneratorParams {
@@ -417,5 +424,17 @@ declare module TERRAIN {
         _tag: string;
         constructor(func: (terrainGen: ComplexNoiseGenerator) => boolean, tag: string);
         Execute(executeOn: ComplexNoiseGenerator): boolean;
+    }
+}
+declare module UTILS {
+    function Clamp(scalar: number, min: number, max: number): number;
+    function Mixin(mixThis: any, toThis: any, dontTouchExistingProperties: any): any;
+    class Chainable<T> {
+        callbacks: {
+            (argument: T): T;
+        }[];
+        constructor(followup?: (argument: T) => T);
+        then(followup: (argument: T) => T): Chainable<T>;
+        call(): IArguments;
     }
 }

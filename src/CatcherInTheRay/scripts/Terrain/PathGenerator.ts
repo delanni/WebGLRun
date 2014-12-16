@@ -2,28 +2,26 @@
     export class PathGenerator {
 
         random: IRandomProvider;
+        pathWidth: number;
 
-        constructor(random: IRandomProvider) {
+        constructor(random: IRandomProvider, pathWidth: number) {
             this.random = random;
+            this.pathWidth = pathWidth;
         }
 
         /**
         * This is the function to generate and draw a path on the canvas
         **/
-        MakePath(canvas: HTMLCanvasElement, from, to, opaque: boolean= true) {
-            var ctrlPoints = this.GeneratePath(canvas, from, to)
-            var cmspline = this.makeCatmull(ctrlPoints);
+        MakePath(canvas: HTMLCanvasElement, fromX?: number, toX?: number, fromY?: number, toY?: number, opaque: boolean= true) {
+            var ctrlPoints = this.GenerateControlPoints(canvas, fromX, toX, fromY, toY);
+            var cmspline = this.MakeCatmull(ctrlPoints);
             this.drawPath(canvas, cmspline, opaque);
             return canvas;
         }
 
-        GeneratePath(canvas: HTMLCanvasElement, from, to): any[] {
-            from = from && [from] || [from, from];
-            to = to && [to] || [to, to];
-            from[0] = from[0] || 0;
-            to[0] = to[0] || canvas.width;
-            from[1] = from[1] || canvas.height;
-            to[1] = to[1] || 0;
+        GenerateControlPoints(canvas: HTMLCanvasElement, fromX?: number, toX?: number, fromY?: number, toY?: number): any[] {
+            var from = [fromX || 0, fromY || canvas.height];
+            var to = [toX || canvas.width, toY || 0];
 
             // Total steps to take 
             var STEPS = 10;
@@ -34,7 +32,7 @@
             var dy = (to[1] - from[1]) / STEPS;
 
             // The normalof the direction
-            var normal = [-dy/2, dx/2];
+            var normal = [-dy / 2, dx / 2];
 
             // Magnitude of the normal
             var abnormal = [-normal[0], -normal[1]];
@@ -86,7 +84,7 @@
             }
         }
 
-        private makeCatmull(anchors: Array<any>): Array<any> {
+        public MakeCatmull(anchors: Array<any>): Array<any> {
             var _points = [];
             for (var i = 0; i < anchors.length - 3; i++) {
                 var diff = Math.abs(anchors[i + 1][1] - anchors[i + 2][1]);
@@ -109,7 +107,7 @@
 
             ctx.moveTo(points[0][0], points[0][1]);
             ctx.beginPath();
-
+            ctx.lineWidth = this.pathWidth;
             for (var j = 0; j < points.length; j++)
                 ctx.lineTo(points[j][0], points[j][1]);
             ctx.stroke();

@@ -1,6 +1,5 @@
 ﻿<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
-
+<html>
 <head>
     <title>PEONHQ - WebGL Runner</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -11,6 +10,7 @@
 </head>
 
 <body ng-app="rr" ng-controller="loginController">
+    <h1>Ravine Run!</h1>
     <form id="loginForm" action="/play" method="POST">
         <div class="inputgroup">
             <input ng-model="name" name="name" type="text" class="input {{nameEdited?'playerName':'placeholderText'}}" ng-click="nameClicked()" />
@@ -23,12 +23,12 @@
                 <div class="characterDescription">{{character.description}}</div>
             </div>
         </div>
-        <div class="inputgroup {{urlEdited&&url?'hide':''}}">
+        <div class="inputgroup {{urlEdited&&url||!(nameEdited&&name)?'hide':''}}">
             <div class="selectButton" id="playButton" ng-click="create()">Create game</div>
         </div>
-        <div class="inputgroup">
-            <input ng-model="url" style="font-size:large" type="text" class="input {{urlEdited?'playerName':'placeholderText'}}" ng-click="urlClicked()" />
-            <div class="selectButton" ng-click="join()">Join game!</div>
+        <div class="inputgroup {{nameEdited&&name?'':'hide'}}">
+            <input ng-model="url" style="font-size:large" type="text" class="input playerName" ng-click="urlClicked()" />
+            <div class="selectButton {{urlEdited&&url?'':'hide'}}" ng-click="join()">Join game!</div>
         </div>
     </form>
 </body>

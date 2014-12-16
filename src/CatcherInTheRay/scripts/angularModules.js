@@ -39,7 +39,7 @@ rr.controller("loginController", function ($scope,$location) {
 
     $scope.nameEdited = qs.name || false;
     $scope.urlEdited = qs.gameId || false;
-    $scope.name = qs.name || "Your name here";
+    $scope.name = qs.name || "Enter your name here";
     $scope.url = qs.gameId || "Paste a game's URL or CODE here";
 
     $scope.nameClicked = function () {
@@ -48,6 +48,7 @@ rr.controller("loginController", function ($scope,$location) {
     }
 
     $scope.urlClicked = function () {
+        if ($scope.urlEdited) return;
         $scope.urlEdited = true;
         $scope.url = "";
     }

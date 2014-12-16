@@ -3,4 +3,3 @@ function index(req, res) {
 }
 exports.index = index;
 ;
-//# sourceMappingURL=index.js.map

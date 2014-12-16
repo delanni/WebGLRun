@@ -18,7 +18,7 @@ module TERRAIN {
         constructor(params: HeightMapGeneratorParams) {
             this.Parameters = params;
             this.Canvas = CreateCanvas(params.width, params.height, true, "mainNoiseCanvas", c=> {
-                c.style.display = "none";
+                c.style.display = params.displayCanvas?"block":"none";
             });
         }
 
@@ -30,17 +30,15 @@ module TERRAIN {
                 ctx.drawImage(image, 0, 0);
                 return this.Canvas;
             }
-
-            var random = this.Parameters.random;
-            var noiseGenerator = new ComplexNoiseGenerator();
+            var cplxNoiseGenerator = new ComplexNoiseGenerator();
 
             // Generate noise
-            noiseGenerator.AddStep(tg => {
+            cplxNoiseGenerator.AddStep(tg => {
                 var noiseGen = new PerlinNoiseGenerator({
                     displayCanvas: this.Parameters.displayCanvas,
                     height: this.Parameters.height,
                     width: this.Parameters.width,
-                    random: random,
+                    randomSeed: this.Parameters.randomSeed,
                     param: this.Parameters.param || 1.1
                 });
 
@@ -51,10 +49,11 @@ module TERRAIN {
             }, "Perlin noise generation");
 
             // Generate ravine path
-            noiseGenerator.AddStep(tg=> {
+            cplxNoiseGenerator.AddStep(tg=> {
                 var SHRINK = this.Parameters.shrink;
                 var pathCanvas = CreateCanvas(this.Parameters.width / SHRINK, this.Parameters.height / SHRINK, this.Parameters.displayCanvas, "ravinePathCanvas");
-                var pathGen = new PathGenerator(random);
+                var pathRandomProvider = new MersenneTwister(this.Parameters.randomSeed);
+                var pathGen = new PathGenerator(pathRandomProvider, 1);
 
                 pathGen.MakePath(pathCanvas, this.Parameters.pathBottomOffset / SHRINK, this.Parameters.pathTopOffset / SHRINK);
 
@@ -64,8 +63,8 @@ module TERRAIN {
             }, "Path generation");
 
             // Blur path
-            noiseGenerator.AddStep(tg=> {
-                var pathCanvas = tg.DraftCanvases["pathCanvas"];
+            cplxNoiseGenerator.AddStep(tg=> {
+               var pathCanvas = tg.DraftCanvases["pathCanvas"];
 
                 var bleedBlurPass1 = new FILTERS.BleedFeed(pathCanvas, 30, 6, true);
                 if (bleedBlurPass1.Check(pathCanvas)) bleedBlurPass1.Apply(pathCanvas);
@@ -78,12 +77,13 @@ module TERRAIN {
             }, "Path blurring");
 
             // Make secondary noise
-            noiseGenerator.AddStep(tg=> {
+            cplxNoiseGenerator.AddStep(tg=> {
                 var snCanvas = CreateCanvas(this.Parameters.width / 2, this.Parameters.height / 2,
                     this.Parameters.displayCanvas, "secondaryNoiseCanvas");
                 var ctx = snCanvas.getContext("2d");
 
-                var pathGen = new PathGenerator(random);
+                var random = new MersenneTwister(this.Parameters.randomSeed);
+                var pathGen = new PathGenerator(random, 1);
 
                 ctx.save();
                 for (var i = 0; i < this.Parameters.destructionLevel; i++) {
@@ -91,7 +91,7 @@ module TERRAIN {
                         snCanvas,
                         (random.Random() * snCanvas.width) | 0,
                         (random.Random() * snCanvas.width) | 0,
-                        i == 0
+                        undefined,undefined,i == 0
                         );
                     var randomOffset = random.Random() * snCanvas.width;
                     ctx.translate(snCanvas.width / 2 + randomOffset, snCanvas.height / 2);
@@ -112,7 +112,7 @@ module TERRAIN {
             }, "Secondary noise generation");
 
             // Composite them
-            noiseGenerator.AddStep(tg=> {
+            cplxNoiseGenerator.AddStep(tg=> {
                 var noiseCanvas = tg.DraftCanvases["noiseCanvas"];
                 var pathCanvas = tg.DraftCanvases["pathCanvas"];
                 var snCanvas = tg.DraftCanvases["snCanvas"];
@@ -134,7 +134,7 @@ module TERRAIN {
 
             // Fire the chain
             Trace("Terrain");
-            var noise = noiseGenerator.GenerateOn(this.Canvas);
+            var noise = cplxNoiseGenerator.GenerateOn(this.Canvas);
             Trace("Terrain");
 
             return noise;

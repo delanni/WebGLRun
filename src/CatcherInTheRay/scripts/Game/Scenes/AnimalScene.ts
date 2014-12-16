@@ -9,6 +9,8 @@ module GAME {
 
             BuildSceneAround(scene: BABYLON.Scene) {
 
+                scene.disablePhysicsEngine();
+
                 // Adding light
                 this._gameWorld._lights = [];
 
@@ -33,7 +35,7 @@ module GAME {
                 this._gameWorld._camera = camera;
                 camera.attachControl(this._gameWorld._canvas);
                 camera.maxZ = 10000;
-                camera.speed = 8;
+                camera.speed = 18;
 
                 var animals = {};
                 var animalNames = ['bearBlack',
@@ -62,7 +64,6 @@ module GAME {
                             console.log(_animal + " loaded.");
                             animals[_animal] = x[0];
                             var a = Cast<BABYLON.Mesh>(x[0]);
-                            Cast<any>(scene)._physicsEngine._unregisterMesh(a);
                             a.position.x = index * 60;
                             a.position.z = index * 80;
 
@@ -83,7 +84,7 @@ module GAME {
                                     a.setVerticesData(BABYLON.VertexBuffer.PositionKind, val, true);
                                 });
                             }
-                        }, null, x=> { console.error("Failed to load.", arguments); });
+                        }, null, x=> { console.error(animal + " failed to load.", arguments); });
                     })();
                 }
 

@@ -61,4 +61,3 @@ socketIo.on("connection", function (x) {
     console.log("User connected");
 });
 console.log("Socket IO listening on", app.get("port"));
-//# sourceMappingURL=app.js.map

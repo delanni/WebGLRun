@@ -3,6 +3,7 @@ var GS;
 (function (GS) {
     var Player = (function () {
         function Player(playerInfo, socket) {
+            this.latency = 0;
             this._socket = socket;
             this.isReady = false;
             this.mapReady = false;
@@ -99,6 +100,7 @@ var GS;
                     }
                     room.players.push(player);
                     socket.on("disconnect", function () {
+                        clearInterval(intervalId);
                         room.players.splice(room.players.indexOf(player), 1);
                     });
                     socket.on("mapLoaded", function (x) {
@@ -120,6 +122,7 @@ var GS;
                                 timeout: 10000
                             });
                         }
+                        nsp.emit("readyStateChanged", x);
                     });
                     socket.on("keydown", function (evt) {
                         player._enemyRef._socket.emit("keydown", evt);
@@ -128,12 +131,20 @@ var GS;
                         player._enemyRef._socket.emit("keyup", evt);
                     });
                     socket.on("positionUpdate", function (data) {
+                        data.push((player.latency + player._enemyRef.latency) / 2);
                         player.pos = data;
                         player._enemyRef._socket.emit("enemyPositionUpdate", player.getPositionInfo());
                     });
-                });
-                socket.on("ping", function (x) {
-                    socket.emit("pong", Date.now());
+                    socket.on("ping", function (x) {
+                        socket.emit("pong", x);
+                    });
+                    socket.on("pong", function (x) {
+                        var latency = Date.now() - x;
+                        player.latency = latency;
+                    });
+                    var intervalId = setInterval(function () {
+                        socket.emit("ping", Date.now());
+                    }, 2000);
                 });
             });
         };
@@ -175,4 +186,3 @@ var GS;
     })();
     GS.GameServer = GameServer;
 })(GS = exports.GS || (exports.GS = {}));
-//# sourceMappingURL=GameServer.js.map

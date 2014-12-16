@@ -6,7 +6,6 @@
             _debug: boolean;
             _useFlatShading: boolean;
             _mapParams: TERRAIN.TerrainGeneratorParams;
-            _physicsEngine: BABYLON.OimoJSPlugin;
             _character: string;
             _flatShader: BABYLON.ShaderMaterial;
 
@@ -25,7 +24,7 @@
                 this._character = parameters.character;
                 this._mapParams = mapParameters;
 
-                this.followPlayer = true;
+                this.followPlayer = false;
 
                 super(gameWorld);
             }
@@ -48,17 +47,17 @@
 
 
                 // Camera
-                // var camera = new BABYLON.FreeCamera("Camera", new BABYLON.Vector3(0, 250, 0), scene);
-                // camera.ellipsoid = new BABYLON.Vector3(8, 10, 8);
-                //// camera.checkCollisions = true;
-                // if (this._gameWorld._camera) this._gameWorld._camera.dispose();
-                // this._gameWorld._camera = camera;
-                // camera.attachControl(this._gameWorld._canvas);
-                // camera.maxZ = 10000;
-                // camera.speed = 8;
-                this.mainCamera = new BABYLON.FollowCamera("camera", new BABYLON.Vector3(0, 1000, 0), scene);
-                this.mainCamera.maxZ = 10000;
-                this.mainCamera.speed = 8;
+                var camera = new BABYLON.FreeCamera("Camera", new BABYLON.Vector3(0, 250, 0), scene);
+                 camera.ellipsoid = new BABYLON.Vector3(8, 10, 8);
+                // camera.checkCollisions = true;
+                 if (this._gameWorld._camera) this._gameWorld._camera.dispose();
+                 this._gameWorld._camera = camera;
+                 camera.attachControl(this._gameWorld._canvas);
+                 camera.maxZ = 10000;
+                 camera.speed = 8;
+                //this.mainCamera = new BABYLON.FollowCamera("camera", new BABYLON.Vector3(0, 1000, 0), scene);
+                //this.mainCamera.maxZ = 10000;
+                //this.mainCamera.speed = 8;
             }
 
             private addSkyDome(scene: BABYLON.Scene): void {
@@ -143,6 +142,7 @@
             private createPlayer(scene: BABYLON.Scene, meshName: string): void {
 
                 var playerMesh: BABYLON.Mesh;
+                this.player = new Player(scene, this.mountains);
 
                 BABYLON.SceneLoader.ImportMesh([meshName], "/models/", meshName+".babylon", scene, x=> {
                     playerMesh = Cast<BABYLON.Mesh>(x[0]);
@@ -161,7 +161,6 @@
                     cameraFollowTarget.isVisible = false;
                     cameraFollowTarget.position = parent.position.clone();
 
-                    this.player = new Player(scene, this.mountains);
                     this.player.Initialize(playerMesh);
 
                     scene.registerBeforeRender(()=>{
@@ -173,7 +172,7 @@
                             this.mainCamera.maxCameraSpeed = 4; // speed limit
                             this.mainCamera.target = cameraFollowTarget;
                             this.mainCamera.setTarget(cameraFollowTarget.position);
-                        } else if (this.mainCamera.target) {
+                        } else if (this.mainCamera && this.mainCamera.target) {
                             var moveTarget = parent.position.subtract(cameraFollowTarget.position);
                             moveTarget.scaleInPlace(0.15);
                             cameraFollowTarget.position.addInPlace(moveTarget);
@@ -207,9 +206,6 @@
 
             public BuildSceneAround(scene: BABYLON.Scene): BABYLON.Scene {
 
-                //this._physicsEngine = new BABYLON.OimoJSPlugin();
-                //scene.enablePhysics(new BABYLON.Vector3(0, -10, 0), this._physicsEngine );
-
                 this.addLightsAndCamera(scene);
 
                 this.createFlatShader(scene);
@@ -222,11 +218,49 @@
 
                 this.createPlayer(scene, this._character);
 
-                //window.addEventListener("click", function () {
-                //    // We try to pick an object
-                //    var pickResult = scene.pick(scene.pointerX, scene.pointerY);
-                //    console.log(pickResult);
-                //});
+
+                var weirdShader = new BABYLON.ShaderMaterial("weirdShader", scene, "weird", {
+                    attributes: ["position", "normal"],
+                    uniforms: ["world", "worldView", "worldViewProjection"]
+                });
+
+                scene.registerBeforeRender(() => {
+                    weirdShader.setFloat("time", (Date.now() / 1000) % (Math.PI * 2));
+                });
+
+                var randomizer = new MersenneTwister(this._randomSeed);
+                var testRay = new BABYLON.Ray(BABYLON.Vector3.Zero(), BABYLON.Axis.Y.scale(-1));
+                var collectibles: BABYLON.Mesh[] = [];
+                for (var i = 0; i < 50;) {
+                    var x = randomizer.Random() * this._mapParams.width - this._mapParams.width / 2;
+                    var z = randomizer.Random() * this._mapParams.height - this._mapParams.height / 2;
+                    testRay.origin.x = x;
+                    testRay.origin.z = z;
+                    var intersex = this.mountains.intersects(testRay, false);
+                    if (intersex.hit && intersex.pickedPoint.y < 25) {
+                        switch (Math.floor(Math.random()*3)) {
+                            case 0:
+                                var collectible = BABYLON.Mesh.CreateSphere("Sphere" + i++, 20, 10, scene, false);
+                                break;
+                            case 1:
+                                collectible = BABYLON.Mesh.CreateTorus("Torus" + i++, 5, 2, 60, scene, false);
+                                break;
+                            case 2:
+                                collectible = BABYLON.Mesh.CreateTorusKnot("TorusKnot" + i++, 2, 1, 80, 30, 3, 4, scene, false);
+                                break;
+                        }
+                        collectible.position = intersex.pickedPoint.clone();
+                        collectible.position.y += randomizer.Random() * 15 + 10;
+                        var axis = new BABYLON.Vector3(Math.random(), Math.random(), Math.random());
+                        axis.normalize();
+                        collectible.rotate(axis, Math.random()*Math.PI, BABYLON.Space.LOCAL);
+                        collectible.material = weirdShader;
+                        collectibles.push(collectible);
+                    }
+                }
+                scene.registerBeforeRender(() => {
+                    collectibles.forEach(e=> e.rotate(BABYLON.Axis.Z, 0.02, BABYLON.Space.LOCAL));
+                });
 
                 return scene;
             }

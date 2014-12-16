@@ -11,14 +11,12 @@ module GAME {
         _gui: GUI;
         _lights: BABYLON.Light[];
         _socket: SocketIOClient.Socket;
-        //_players: { [name: string]: Player }
-        //_players: Player[];
         _scenes: { [name: string]: SCENES.SceneBuilder } = {};
 
         player: Player;
         enemy: Player;
 
-        sceneBuilder: GAME.SCENES.GameScene;
+        gameScene: GAME.SCENES.GameScene;
 
         /// DEFAULTS ARE HERE ///
         private random = new MersenneTwister(111);
@@ -40,7 +38,6 @@ module GAME {
                 minHeight: 0,
                 maxHeight: 300,
                 subdivisions: 200,
-                random: this.random,
                 param: 1.1,
                 pathBottomOffset: 300,
                 pathTopOffset: 300,
@@ -66,27 +63,46 @@ module GAME {
                 UTILS.Mixin(parameters, this.parameters, false);
             }
 
-            this.appendHandlers(this._socket);
+            if (this._socket) {
+                this.appendHandlers(this._socket);
+            }
         }
 
-        public Load(properties: GameProperties) {
+        public Load(properties: GameProperties): UTILS.Chainable<any> {
+            var deferred = new UTILS.Chainable();
             properties = UTILS.Mixin(properties, this.parameters, false);
-            var random = new MersenneTwister(properties.mapParameters.randomSeed);
-            properties.mapParameters.random = random;
-            this._engine.displayLoadingUI().then(() => {
+            this._engine.displayLoadingUI("Generating map, please wait...").then(() => {
                 this.applyParameters(properties);
                 this.loadScene(properties.sceneId);
                 if (this.parameters.gameParameters.isHost) {
                     var c = <HTMLCanvasElement>document.getElementById("mainNoiseCanvas");
                     var dataurl = c.toDataURL();
-                    this._socket.emit("mapLoaded", { timestamp: Date.now(), heightmap: dataurl });
+                    this.emit("mapLoaded", { timestamp: Date.now(), heightmap: dataurl });
                 } else {
-                    this._socket.emit("mapLoaded", { timestamp: Date.now() });
+                    this.emit("mapLoaded", { timestamp: Date.now() });
                 }
-                this._engine.hideLoadingUI();
-                this.hookKeyboardTo(this.sceneBuilder.player.Controller);
-                this.player = this.sceneBuilder.player;
+
+                this._engine.hideLoadingUI().then(() => {
+                    deferred.call();
+                });
+
+                if (properties.sceneId == Scenes.GAME) {
+                    var gameScene = Cast<SCENES.GameScene>(this._scenes["GAME"]);
+                    this.hookKeyboardTo(gameScene.player.Controller);
+                    this.player = gameScene.player;
+                } else if (properties.sceneId == Scenes.EXPLORE) {
+                    var exploreScene = Cast<SCENES.ExploreScene>(this._scenes["EXPLORE"]);
+                    this.hookKeyboardTo(exploreScene.player.Controller);
+                    this.player = exploreScene.player;
+                }
             });
+            return deferred;
+        }
+
+        private emit(messageType: string, args: any) {
+            if (this._socket) {
+                this._socket.emit.apply(this._socket, arguments);
+            }
         }
 
         private hookSocketTo(controller: any) {
@@ -109,7 +125,7 @@ module GAME {
         private hookKeyboardTo(controller: any) {
             window.addEventListener("keydown", evt=> {
                 if (evt.keyCode in ACCEPTED_KEYS) {
-                    this._socket.emit("keydown", { keyCode: evt.keyCode });
+                    this.emit("keydown", { keyCode: evt.keyCode });
                     if (controller[evt.keyCode] === 0) {
                         controller[evt.keyCode] = 1;
                     }
@@ -118,7 +134,7 @@ module GAME {
             });
             window.addEventListener("keyup", evt=> {
                 if (evt.keyCode in ACCEPTED_KEYS) {
-                    this._socket.emit("keyup", { keyCode: evt.keyCode });
+                    this.emit("keyup", { keyCode: evt.keyCode });
                     controller[evt.keyCode] = 0;
                     evt.preventDefault();
                 }
@@ -134,18 +150,19 @@ module GAME {
                 });
                 // this is info about me
                 window.postMessage({
-                    playerInfo: { name: this.parameters.gameParameters.name }
+                    playerInfo: { name: this.parameters.gameParameters.name , playerType:"player"}
                 }, window.location.href);
             });
 
             socket.on("playerJoined", playerInfo=> {
-                var enemy = this.sceneBuilder.CreateEnemy(playerInfo.character);
+                var gameScene = Cast<SCENES.GameScene>(this._scenes["GAME"]);
+                var enemy = gameScene.CreateEnemy(playerInfo.character);
                 this.hookSocketTo(enemy.Controller);
                 this.enemy = enemy;
 
                 // this is info about the enemigo
                 window.postMessage({
-                    playerInfo: { name: playerInfo.name }
+                    playerInfo: { name: playerInfo.name, playerType: "enemy" }
                 }, window.location.href);
             });
 
@@ -154,11 +171,11 @@ module GAME {
             });
 
             socket.on("ping", x=> {
-                socket.emit("pong", { timestamp: Date.now() });
+                socket.emit("pong", x);
             });
 
             socket.on("pong", x=> {
-                console.log("pong", x);
+                console.log("pong", Date.now()-x);
             });
 
             socket.on("startGame", x=> {
@@ -169,17 +186,18 @@ module GAME {
                 setTimeout(() => {
                     this.countdown(timeout);
                 }, 0);
-                this.startRenderLoop();
+                this.StartRenderLoop();
             });
         }
         _lastPositionUpdate: number = 0;
 
-        private startRenderLoop() {
-			this._scene.registerBeforeRender(() => {
+        public StartRenderLoop() {
+            this._scene.registerBeforeRender(() => {
+                if (!this.player || !this._socket) return;
                 var now = Date.now();
                 if (now - this._lastPositionUpdate > 1000) {
                     this._lastPositionUpdate = now;
-                    this._socket.emit("positionUpdate",
+                    this.emit("positionUpdate",
                         [
                             this.player.parent.position.asArray(),
                             this.player.parent.rotationQuaternion.asArray(),
@@ -219,11 +237,9 @@ module GAME {
                     var testScene = new SCENES.TestScene(this);
                     this._scenes["TEST"] = testScene;
                     break;
-
                 case Scenes.GAME:
                     var gameScene = new SCENES.GameScene(this,
                         parameters.gameParameters, parameters.mapParameters);
-                    this.sceneBuilder = gameScene;
                     this._scenes["GAME"] = gameScene;
                     break;
                 case Scenes.ANIMAL:
@@ -233,6 +249,10 @@ module GAME {
                 case Scenes.TERRAINGEN:
                     var terrainGenScene = new SCENES.TerrainGenScene(this, parameters.gameParameters, parameters.mapParameters);
                     this._scenes["TERRAINGEN"] = terrainGenScene;
+                    break;
+                case Scenes.EXPLORE:
+                    var exploreScene = new SCENES.ExploreScene(this, parameters.gameParameters, parameters.mapParameters);
+                    this._scenes["EXPLORE"] = exploreScene;
                     break;
             }
         }
@@ -271,6 +291,10 @@ module GAME {
                 debugItems[i].parentNode.removeChild(debugItems[i]);
             }
 
+            if (this._scene) {
+                this._scene.dispose();
+            }
+
             switch (s) {
                 case Scenes.TEST:
                     this._scene = this._scenes["TEST"].BuildScene();
@@ -283,6 +307,9 @@ module GAME {
                     break;
                 case Scenes.TERRAINGEN:
                     this._scene = this._scenes["TERRAINGEN"].BuildScene();
+                    break;
+                case Scenes.EXPLORE:
+                    this._scene = this._scenes["EXPLORE"].BuildScene();
                     break;
             }
         }

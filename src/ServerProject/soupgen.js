@@ -7,4 +7,3 @@ function Generate(length) {
     return out;
 }
 exports.Generate = Generate;
-//# sourceMappingURL=soupgen.js.map

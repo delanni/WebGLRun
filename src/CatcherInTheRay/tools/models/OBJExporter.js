@@ -43,8 +43,6 @@ THREE.OBJExporter.prototype = {
 			for ( var j = 0; j < normals.length; j ++ ) {
 
 				var normal = normals[ j ];
-				// try flat by:
-				// var normal = geometry.faces[ i ].normal;
 				output += 'vn ' + normal.x + ' ' + normal.y + ' ' + normal.z + '\n';
 
 			}

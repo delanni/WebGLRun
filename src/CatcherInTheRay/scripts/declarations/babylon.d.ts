@@ -186,7 +186,7 @@ declare module BABYLON {
         public _setAnisotropicLevel(key: number, texture: BaseTexture): void;
         public readPixels(x: number, y: number, width: number, height: number): Uint8Array;
         public dispose(): void;
-        public displayLoadingUI(): Chainable<void,void>;
+        public displayLoadingUI(caption?:string): Chainable<void,void>;
         public loadingUIText : string;
         public loadingUIBackgroundColor : string;
         public hideLoadingUI(): Chainable<void,void>;

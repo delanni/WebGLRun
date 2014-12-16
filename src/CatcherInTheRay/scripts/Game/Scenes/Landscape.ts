@@ -83,9 +83,6 @@
                 Trace("Colorize mesh");
 
                 if (this._useFlatShading) {
-                    //mountainMesh.convertToFlatShadedMesh();
-                    //var convertedVertices = mountainMesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
-                    //console.log("Vertices after conversion: " + convertedVertices.length);
                     var flatShaderMountainMat = new BABYLON.ShaderMaterial("flatShader", scene, "flat", {
                         attributes: ["position", "normal", "uv", "color"],
                         uniforms: ["world", "worldView", "worldViewProjection", "view", "projection"]
@@ -124,14 +121,6 @@
 
                 startOrb.position = new BABYLON.Vector3(this._mapParams.pathTopOffset - this._mapParams.width / 2, 20, this._mapParams.height / 2 - 10);
                 endOrb.position = new BABYLON.Vector3(this._mapParams.pathBottomOffset - this._mapParams.width / 2, 20, this._mapParams.height / -2 + 10);
-
-                //window.addEventListener("click", function () {
-                //    // We try to pick an object
-                //    var pickResult = scene.pick(scene.pointerX, scene.pointerY);
-                //    console.log(pickResult);
-                //    pickResult.pickedMesh.material.wireframe = !pickResult.pickedMesh.material.wireframe;
-                //});
-
 
                 return scene;
 

@@ -47,6 +47,7 @@ export module GS {
         name: string;
         character: string;
         pos: any;
+        latency: number=0;
 
         constructor(playerInfo:IPlayerInfo , socket: SocketIO.Socket) {
             this._socket = socket;
@@ -170,6 +171,7 @@ export module GS {
 
                     room.players.push(player);
                     socket.on("disconnect", () => {
+                        clearInterval(intervalId);
                         room.players.splice(room.players.indexOf(player), 1);
                     });
 
@@ -194,6 +196,7 @@ export module GS {
                                 timeout: 10000
                             });
                         }
+                        nsp.emit("readyStateChanged", x);
                     });
 
                     socket.on("keydown", evt => {
@@ -204,14 +207,23 @@ export module GS {
                     });
 
                     socket.on("positionUpdate", data=> {
-                        player.pos=data;
+                        data.push((player.latency+player._enemyRef.latency)/2);
+                        player.pos = data;
                         player._enemyRef._socket.emit("enemyPositionUpdate", player.getPositionInfo());
                     });
-                });
 
+                    socket.on("ping", x=> {
+                        socket.emit("pong", x);
+                    });
 
-                socket.on("ping", x=> {
-                    socket.emit("pong", Date.now());
+                    socket.on("pong", x=> {
+                        var latency = Date.now() - x;
+                        player.latency = latency;
+                    });
+
+                    var intervalId = setInterval(() => {
+                        socket.emit("ping", Date.now());
+                    }, 2000);
                 });
             });
         }

@@ -49,29 +49,18 @@
             index = index % ((width) * 4);
             index += this._gradientBase;
             return [this._gradient.data[index], this._gradient.data[index + 1], this._gradient.data[index + 2]];
-            //return [height, height, height];
         }
 
         public ColorizeMesh(mesh: BABYLON.Mesh) {
             var positionData = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
             var colorData = [];
 
-            Trace("Mapping");
-            var copy = positionData.map(function (x, i) { return i % 3 == 1 ? x : 0 });
-            Trace("Mapping");
+            var maxVec = mesh.getBoundingInfo().boundingBox.maximum;
+            var minVec = mesh.getBoundingInfo().boundingBox.minimum;
 
-            Trace("Min/Max");
-            //var copySorted = copy.sort((a,b)=>a>b?1:-1);
-            //this._maxHeight = copy.pop();
-            //this._minHeight = copy.shift();
-            console.log("Total number of vertices:" + copy.length / 3);
-            //this._maxHeight = copy.reduce((lastItem, newItem) => lastItem > newItem ? lastItem : newItem);
-            this._maxHeight = Math.max.apply(null, copy);
-            //this._minHeight = copy.reduce((lastItem, newItem) => lastItem < newItem ? lastItem : newItem);
-            this._minHeight = Math.min.apply(null, copy);
+            this._maxHeight = maxVec.y;
+            this._minHeight = minVec.y;
             var heightScale = this._maxHeight - this._minHeight;
-
-            Trace("Min/Max");
 
             Trace("Color fetching");
             for (var i = 1; i < positionData.length; i += 3) {
@@ -84,6 +73,11 @@
             mesh.setVerticesData(BABYLON.VertexBuffer.ColorKind, colorData, true);
         }
 
+        /**
+         * This function takes a mesh that's the mountains' mesh data, and creates a wrapping
+         * mesh around it, that hides its intestines, so that it will look like a piece of 
+         * ground chopped out of Earth.
+         */
         public GenerateWrappingMesh(mesh: BABYLON.Mesh, scene: BABYLON.Scene): BABYLON.Mesh {
 
             // Get vertex info

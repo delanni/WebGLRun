@@ -253,6 +253,12 @@ var GAME;
                 speed: 14,
                 repeat: true
             },
+            REVERSE: {
+                start: 11,
+                end: 1,
+                speed: -7,
+                repeat: true
+            },
             STAY: {
                 start: 0,
                 end: 1,
@@ -274,6 +280,12 @@ var GAME;
                 speed: 16,
                 repeat: true
             },
+            REVERSE: {
+                start: 14,
+                end: 1,
+                speed: -8,
+                repeat: true
+            },
             STAY: {
                 start: 0,
                 end: 1,
@@ -286,13 +298,19 @@ var GAME;
                 speed: 14,
                 repeat: false
             },
-            ScalingVector: BABYLON.Vector3.FromArray([0.20, 0.20, 0.20])
+            ScalingVector: BABYLON.Vector3.FromArray([0.15, 0.15, 0.15])
         },
         "moose": {
             RUN: {
                 start: 1,
                 end: 15,
                 speed: 12,
+                repeat: true
+            },
+            REVERSE: {
+                start: 15,
+                end: 1,
+                speed: -6,
                 repeat: true
             },
             STAY: {
@@ -307,13 +325,19 @@ var GAME;
                 speed: 14,
                 repeat: false
             },
-            ScalingVector: BABYLON.Vector3.FromArray([0.10, 0.10, 0.10])
+            ScalingVector: BABYLON.Vector3.FromArray([0.11, 0.11, 0.11])
         },
         "deer": {
             RUN: {
                 start: 1,
                 end: 16,
                 speed: 16,
+                repeat: true
+            },
+            REVERSE: {
+                start: 16,
+                end: 1,
+                speed: -8,
                 repeat: true
             },
             STAY: {
@@ -328,13 +352,19 @@ var GAME;
                 speed: 14,
                 repeat: false
             },
-            ScalingVector: BABYLON.Vector3.FromArray([0.15, 0.15, 0.15])
+            ScalingVector: BABYLON.Vector3.FromArray([0.13, 0.13, 0.13])
         },
         "elk": {
             RUN: {
                 start: 1,
                 end: 15,
                 speed: 12,
+                repeat: true
+            },
+            REVERSE: {
+                start: 15,
+                end: 1,
+                speed: -6,
                 repeat: true
             },
             STAY: {
@@ -349,13 +379,19 @@ var GAME;
                 speed: 14,
                 repeat: false
             },
-            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
+            ScalingVector: BABYLON.Vector3.FromArray([0.20, 0.20, 0.20])
         },
         "mountainlion": {
             RUN: {
                 start: 1,
                 end: 13,
                 speed: 16,
+                repeat: true
+            },
+            REVERSE: {
+                start: 13,
+                end: 1,
+                speed: -8,
                 repeat: true
             },
             STAY: {
@@ -370,13 +406,19 @@ var GAME;
                 speed: 14,
                 repeat: false
             },
-            ScalingVector: BABYLON.Vector3.FromArray([0.15, 0.15, 0.15])
+            ScalingVector: BABYLON.Vector3.FromArray([0.13, 0.13, 0.13])
         },
         "chowchow": {
             RUN: {
                 start: 1,
                 end: 13,
                 speed: 16,
+                repeat: true
+            },
+            REVERSE: {
+                start: 13,
+                end: 1,
+                speed: -8,
                 repeat: true
             },
             STAY: {
@@ -398,6 +440,12 @@ var GAME;
                 start: 1,
                 end: 12,
                 speed: 16,
+                repeat: true
+            },
+            REVERSE: {
+                start: 12,
+                end: 1,
+                speed: -8,
                 repeat: true
             },
             STAY: {
@@ -460,8 +508,14 @@ var GAME;
                 var camera = new BABYLON.ArcRotateCamera("Camera", 10, 20, 30, new BABYLON.Vector3(0, 0, 0), scene);
                 camera.attachControl(this._gameWorld._canvas);
                 torusKnot = BABYLON.Mesh.CreateTorusKnot("torusknot", 3, 2, 80, 30, 4, 4, scene, true);
+                var weirdShaderMat = new BABYLON.ShaderMaterial("weirdShader", scene, "weird", {
+                    attributes: ["position", "normal"],
+                    uniforms: ["world", "worldView", "worldViewProjection", "view", "projection"]
+                });
+                torusKnot.material = weirdShaderMat;
                 scene.registerBeforeRender(function () {
                     torusKnot.rotate(BABYLON.Vector3.Up(), 0.01, 0 /* LOCAL */);
+                    weirdShaderMat.setFloat("time", (Date.now() / 1000) % (Math.PI * 2));
                 });
                 return scene;
             };
@@ -530,7 +584,7 @@ var GAME;
                 terrainGenerator.ColorizeMesh(mountainMesh);
                 Trace("Colorize mesh");
                 if (this._useFlatShading) {
-                    mountainMesh.material = this._flatShader;
+                    mountainMesh.material = this._flatShaderMat;
                 }
                 else {
                     var mountainMaterial = new BABYLON.StandardMaterial("groundMaterial", scene);
@@ -568,7 +622,7 @@ var GAME;
                 this.player = new GAME.Player(scene, this.mountains);
                 BABYLON.SceneLoader.ImportMesh([meshName], "/models/", meshName + ".babylon", scene, function (x) {
                     playerMesh = Cast(x[0]);
-                    playerMesh.material = _this._flatShader;
+                    playerMesh.material = _this._flatShaderMat;
                     playerMesh.position = new BABYLON.Vector3(0, -5, 0);
                     playerMesh.rotate(BABYLON.Axis.Y, Math.PI, 0 /* LOCAL */);
                     var parent = BABYLON.Mesh.CreateSphere("colliderBox", 30, 2, scene, true);
@@ -599,6 +653,8 @@ var GAME;
                             _this.mainCamera.rotationOffset = UTILS.Clamp((_this.player.CurrentRotation % Math.PI) / Math.PI * 180, -45, 45);
                         }
                     });
+                }, null, function () {
+                    console.error("Mesh loading error");
                 });
                 return this.player;
             };
@@ -609,7 +665,7 @@ var GAME;
                 this.enemy = new GAME.Player(scene, this.mountains);
                 BABYLON.SceneLoader.ImportMesh([meshName], "/models/", meshName + ".babylon", scene, function (x) {
                     enemyMesh = Cast(x[0]);
-                    enemyMesh.material = _this._flatShader;
+                    enemyMesh.material = _this._flatShaderMat;
                     enemyMesh.position = new BABYLON.Vector3(0, -5, 0);
                     enemyMesh.rotate(BABYLON.Axis.Y, Math.PI, 0 /* LOCAL */);
                     var parent = BABYLON.Mesh.CreateSphere("colliderBox", 30, 2, scene, true);
@@ -619,10 +675,12 @@ var GAME;
                     parent.position = _this.startOrb.position.clone();
                     parent.position.x += _this._gameWorld.parameters.gameParameters.isHost ? -20 : 20;
                     _this.enemy.Initialize(enemyMesh);
+                }, null, function () {
+                    console.error("Mesh loading error");
                 });
                 return this.enemy;
             };
-            GameScene.prototype.createFlatShader = function () {
+            GameScene.prototype.createShaders = function () {
                 var scene = this._scene;
                 var flatShader = new BABYLON.ShaderMaterial("flatShader", scene, "flat", {
                     attributes: ["position", "normal", "uv", "color"],
@@ -638,15 +696,29 @@ var GAME;
                     var colors = BABYLON.Vector3.FromArray(light.diffuse.asArray());
                     flatShader.setVector3("light" + (i + 1) + "Color", colors);
                 }
-                this._flatShader = flatShader;
+                this._flatShaderMat = flatShader;
+                var weirdShader = new BABYLON.ShaderMaterial("weirdShader", scene, "weird", {
+                    attributes: ["position", "normal"],
+                    uniforms: ["world", "worldView", "worldViewProjection"]
+                });
+                scene.registerBeforeRender(function () {
+                    weirdShader.setFloat("time", (Date.now() / 1000) % (Math.PI * 2));
+                });
+                this._weirdShaderMat = weirdShader;
+            };
+            GameScene.prototype.DropCollectibles = function () {
+                var randomizer = new MersenneTwister(this._randomSeed);
+                for (var i = 0; i < 50; i++) {
+                }
             };
             GameScene.prototype.BuildSceneAround = function (scene) {
                 this.addLightsAndCamera();
-                this.createFlatShader();
+                this.createShaders();
                 this.addSkyDome();
                 this.generateLandscape();
                 this.putStartAndEnd();
                 this.CreatePlayer(this._character);
+                this.DropCollectibles();
                 return scene;
             };
             return GameScene;
@@ -678,7 +750,6 @@ var GAME;
                     minHeight: 0,
                     maxHeight: 300,
                     subdivisions: 200,
-                    random: this.random,
                     param: 1.1,
                     pathBottomOffset: 300,
                     pathTopOffset: 300,
@@ -700,28 +771,45 @@ var GAME;
             else {
                 UTILS.Mixin(parameters, this.parameters, false);
             }
-            this.appendHandlers(this._socket);
+            if (this._socket) {
+                this.appendHandlers(this._socket);
+            }
         }
         GameWorld.prototype.Load = function (properties) {
             var _this = this;
+            var deferred = new UTILS.Chainable();
             properties = UTILS.Mixin(properties, this.parameters, false);
-            var random = new MersenneTwister(properties.mapParameters.randomSeed);
-            properties.mapParameters.random = random;
-            this._engine.displayLoadingUI().then(function () {
+            this._engine.displayLoadingUI("Generating map, please wait...").then(function () {
                 _this.applyParameters(properties);
                 _this.loadScene(properties.sceneId);
                 if (_this.parameters.gameParameters.isHost) {
                     var c = document.getElementById("mainNoiseCanvas");
                     var dataurl = c.toDataURL();
-                    _this._socket.emit("mapLoaded", { timestamp: Date.now(), heightmap: dataurl });
+                    _this.emit("mapLoaded", { timestamp: Date.now(), heightmap: dataurl });
                 }
                 else {
-                    _this._socket.emit("mapLoaded", { timestamp: Date.now() });
+                    _this.emit("mapLoaded", { timestamp: Date.now() });
                 }
-                _this._engine.hideLoadingUI();
-                _this.hookKeyboardTo(_this.sceneBuilder.player.Controller);
-                _this.player = _this.sceneBuilder.player;
+                _this._engine.hideLoadingUI().then(function () {
+                    deferred.call();
+                });
+                if (properties.sceneId == 2 /* GAME */) {
+                    var gameScene = Cast(_this._scenes["GAME"]);
+                    _this.hookKeyboardTo(gameScene.player.Controller);
+                    _this.player = gameScene.player;
+                }
+                else if (properties.sceneId == 5 /* EXPLORE */) {
+                    var exploreScene = Cast(_this._scenes["EXPLORE"]);
+                    _this.hookKeyboardTo(exploreScene.player.Controller);
+                    _this.player = exploreScene.player;
+                }
             });
+            return deferred;
+        };
+        GameWorld.prototype.emit = function (messageType, args) {
+            if (this._socket) {
+                this._socket.emit.apply(this._socket, arguments);
+            }
         };
         GameWorld.prototype.hookSocketTo = function (controller) {
             var socket = this._socket;
@@ -742,7 +830,7 @@ var GAME;
             var _this = this;
             window.addEventListener("keydown", function (evt) {
                 if (evt.keyCode in GAME.ACCEPTED_KEYS) {
-                    _this._socket.emit("keydown", { keyCode: evt.keyCode });
+                    _this.emit("keydown", { keyCode: evt.keyCode });
                     if (controller[evt.keyCode] === 0) {
                         controller[evt.keyCode] = 1;
                     }
@@ -751,7 +839,7 @@ var GAME;
             });
             window.addEventListener("keyup", function (evt) {
                 if (evt.keyCode in GAME.ACCEPTED_KEYS) {
-                    _this._socket.emit("keyup", { keyCode: evt.keyCode });
+                    _this.emit("keyup", { keyCode: evt.keyCode });
                     controller[evt.keyCode] = 0;
                     evt.preventDefault();
                 }
@@ -766,25 +854,26 @@ var GAME;
                     character: _this.parameters.gameParameters.character
                 });
                 window.postMessage({
-                    playerInfo: { name: _this.parameters.gameParameters.name }
+                    playerInfo: { name: _this.parameters.gameParameters.name, playerType: "player" }
                 }, window.location.href);
             });
             socket.on("playerJoined", function (playerInfo) {
-                var enemy = _this.sceneBuilder.CreateEnemy(playerInfo.character);
+                var gameScene = Cast(_this._scenes["GAME"]);
+                var enemy = gameScene.CreateEnemy(playerInfo.character);
                 _this.hookSocketTo(enemy.Controller);
                 _this.enemy = enemy;
                 window.postMessage({
-                    playerInfo: { name: playerInfo.name }
+                    playerInfo: { name: playerInfo.name, playerType: "enemy" }
                 }, window.location.href);
             });
             socket.on("enemyPositionUpdate", function (positionInfo) {
                 _this.enemy.pushUpdate(positionInfo);
             });
             socket.on("ping", function (x) {
-                socket.emit("pong", { timestamp: Date.now() });
+                socket.emit("pong", x);
             });
             socket.on("pong", function (x) {
-                console.log("pong", x);
+                console.log("pong", Date.now() - x);
             });
             socket.on("startGame", function (x) {
                 var timeout = x.timeout;
@@ -794,16 +883,18 @@ var GAME;
                 setTimeout(function () {
                     _this.countdown(timeout);
                 }, 0);
-                _this.startRenderLoop();
+                _this.StartRenderLoop();
             });
         };
-        GameWorld.prototype.startRenderLoop = function () {
+        GameWorld.prototype.StartRenderLoop = function () {
             var _this = this;
             this._scene.registerBeforeRender(function () {
+                if (!_this.player || !_this._socket)
+                    return;
                 var now = Date.now();
-                if (now - _this._lastPositionUpdate > 3000) {
+                if (now - _this._lastPositionUpdate > 1000) {
                     _this._lastPositionUpdate = now;
-                    _this._socket.emit("positionUpdate", [
+                    _this.emit("positionUpdate", [
                         _this.player.parent.position.asArray(),
                         _this.player.parent.rotationQuaternion.asArray(),
                         _this.player.velocity.asArray(),
@@ -841,7 +932,6 @@ var GAME;
                     break;
                 case 2 /* GAME */:
                     var gameScene = new GAME.SCENES.GameScene(this, parameters.gameParameters, parameters.mapParameters);
-                    this.sceneBuilder = gameScene;
                     this._scenes["GAME"] = gameScene;
                     break;
                 case 3 /* ANIMAL */:
@@ -851,6 +941,10 @@ var GAME;
                 case 4 /* TERRAINGEN */:
                     var terrainGenScene = new GAME.SCENES.TerrainGenScene(this, parameters.gameParameters, parameters.mapParameters);
                     this._scenes["TERRAINGEN"] = terrainGenScene;
+                    break;
+                case 5 /* EXPLORE */:
+                    var exploreScene = new GAME.SCENES.ExploreScene(this, parameters.gameParameters, parameters.mapParameters);
+                    this._scenes["EXPLORE"] = exploreScene;
                     break;
             }
         };
@@ -887,6 +981,9 @@ var GAME;
             for (var i = 0; debugItems.length > 0;) {
                 debugItems[i].parentNode.removeChild(debugItems[i]);
             }
+            if (this._scene) {
+                this._scene.dispose();
+            }
             switch (s) {
                 case 0 /* TEST */:
                     this._scene = this._scenes["TEST"].BuildScene();
@@ -899,6 +996,9 @@ var GAME;
                     break;
                 case 4 /* TERRAINGEN */:
                     this._scene = this._scenes["TERRAINGEN"].BuildScene();
+                    break;
+                case 5 /* EXPLORE */:
+                    this._scene = this._scenes["EXPLORE"].BuildScene();
                     break;
             }
         };
@@ -930,45 +1030,23 @@ var GAME;
             this.BASE_ACCELERATION = 2;
             this.BASE_JUMP_POW = 2.8;
             this.LAND_COOLDOWN = 100;
-            this.ROTATION_APPROXIMATOR = 4;
-            this.MINVECTOR = new BABYLON.Vector3(-2, -10, -2);
-            this.MAXVECTOR = new BABYLON.Vector3(2, 10, 2);
+            this.ROTATION_APPROXIMATOR = 1 / 8;
+            this.TIMEFACTOR = 24;
+            this.MINVECTOR = new BABYLON.Vector3(-2, -15, -2);
+            this.MAXVECTOR = new BABYLON.Vector3(2, 15, 0.7);
             this.GRAVITY = new BABYLON.Vector3(0, -0.15, 0);
             this.Controller = { "32": 0, "87": 0, "68": 0, "83": 0, "65": 0, "82": 0 };
             this._landTime = 0;
             this._lastRescueTime = 0;
+            this._lastJumpTime = 0;
             this.CurrentRotation = 0;
             this.IsEnabled = false;
             this._lastUpdateTime = 0;
-            this._gameLoop = function () {
-                var lastFrame = this._scene.getLastFrameDuration();
-                this._ray.origin = this.parent.position.add(this._bottomVector);
-                var intersection = this._ground.intersects(this._ray);
-                if (!this.Controller[32] && intersection.hit && intersection.distance < this.INTERSECTION_TRESHOLD) {
-                    this.parent.position.y = intersection.pickedPoint.y - this._bottomVector.y;
-                    this.velocity.y = 0;
-                    if (!this.isOnGround) {
-                        this.isOnGround = true;
-                        this._landTime = Date.now();
-                        this.stopAnimation();
-                    }
-                }
-                else {
-                    this.velocity.addInPlace(this.GRAVITY);
-                }
-                this.ReadKeys(this.Controller);
-                this.velocity = BABYLON.Vector3.Clamp(this.velocity, this.MINVECTOR, this.MAXVECTOR);
-                if (this.velocity.length() > 0.001) {
-                    this.parent.rotationQuaternion.toRotationMatrix(this.rotationMatrix);
-                    this.parent.moveWithCollisions(BABYLON.Vector3.TransformCoordinates(this.velocity, this.rotationMatrix));
-                }
-                else {
-                    this.velocity.scaleInPlace(0);
-                }
-                if (this.isOnGround) {
-                    this.velocity.scaleInPlace(0.8);
-                }
-            };
+            this._latency = 0;
+            this._lastFrameFactor = 1;
+            this._totalFramesDuration = 1800;
+            this._totalFramesCount = 100;
+            this._lastTickTime = Date.now();
             this._scene = scene;
             this._ground = ground;
             this._bottomVector = new BABYLON.Vector3(0, -5, 0);
@@ -993,28 +1071,91 @@ var GAME;
             var boundingInfo = this.mesh.getBoundingInfo();
             this.parent.checkCollisions = true;
             this.parent.rotationQuaternion = new BABYLON.Quaternion(0, 0, 0, 1);
-            this._scene.getPhysicsEngine()._unregisterMesh(this.mesh);
             this._scene.registerBeforeRender(function () { return _this._gameLoop(); });
         };
         Player.prototype.pushUpdate = function (positionData) {
             if (positionData[3] > this._lastUpdateTime) {
                 this._lastUpdateTime = positionData[3];
+                this._latency = positionData[4];
                 this.velocity.copyFromFloats.apply(this.velocity, positionData[2]);
                 this.parent.rotationQuaternion.copyFromFloats.apply(this.parent.rotationQuaternion, positionData[1]);
-                this.parent.position.copyFromFloats.apply(this.parent.position, positionData[0]);
+                this.targetPosition = BABYLON.Vector3.FromArray(positionData[0]);
+                this.parent.rotationQuaternion.toRotationMatrix(this.rotationMatrix);
+                var orientedVelocity = BABYLON.Vector3.TransformCoordinates(this.velocity, this.rotationMatrix);
+                var extrapolationVector = orientedVelocity.scale(this._latency / this.TIMEFACTOR);
+                this.targetPosition.addInPlace(extrapolationVector);
+            }
+        };
+        Player.prototype._gameLoop = function () {
+            var lastFrameTime = Date.now() - this._lastTickTime;
+            this._lastTickTime = Date.now();
+            if (lastFrameTime > 1000)
+                return;
+            this._totalFramesDuration += lastFrameTime;
+            this._totalFramesCount++;
+            if (this._totalFramesCount % 1000 == 0) {
+                this._totalFramesCount /= 2;
+                this._totalFramesDuration /= 2;
+            }
+            else if (this._totalFramesCount % 10 == 0) {
+                this._lastFrameFactor = (this._totalFramesDuration / this._totalFramesCount) / this.TIMEFACTOR;
+            }
+            if (Date.now() - this._lastJumpTime > 100) {
+                this._ray.origin = this.parent.position.add(this._bottomVector);
+                var intersection = this._ground.intersects(this._ray);
+                if (!this.Controller[32] && intersection.hit && intersection.distance < this.INTERSECTION_TRESHOLD) {
+                    this.parent.position.y = intersection.pickedPoint.y - this._bottomVector.y;
+                    this.velocity.y = 0;
+                    if (!this.isOnGround) {
+                        this.isOnGround = true;
+                        this._landTime = Date.now();
+                        this.stopAnimation();
+                    }
+                }
+                else {
+                    this.velocity.addInPlace(this.GRAVITY.scale(this._lastFrameFactor));
+                }
+            }
+            this.EvaluateKeyState(this.Controller);
+            this.velocity = BABYLON.Vector3.Clamp(this.velocity, this.MINVECTOR, this.MAXVECTOR);
+            if (this.velocity.length() > 0.001) {
+                var positionBeforeMove = this.parent.position.clone();
+                this.parent.rotationQuaternion.toRotationMatrix(this.rotationMatrix);
+                var orientedVelocity = BABYLON.Vector3.TransformCoordinates(this.velocity, this.rotationMatrix);
+                this.parent.moveWithCollisions(orientedVelocity.scale(this._lastFrameFactor));
+                var movementVector = this.parent.position.subtract(positionBeforeMove);
+                if (this.targetPosition) {
+                    this.targetPosition.addInPlace(movementVector);
+                }
+            }
+            else {
+                this.velocity.scaleInPlace(0);
+            }
+            if (this.isOnGround) {
+                this.velocity.scaleInPlace(Math.pow(0.8, this._lastFrameFactor));
+            }
+            if (this.targetPosition) {
+                this.parent.position = BABYLON.Vector3.Lerp(this.parent.position, this.targetPosition, 1 - Math.pow(0.8, this._lastFrameFactor));
+                if (this.parent.position.y < 0)
+                    this.parent.position.y = 1;
             }
         };
         Player.prototype.Jump = function (power) {
             if (Date.now() - this._landTime < this.LAND_COOLDOWN)
                 return;
             this.velocity.y = (this.BASE_JUMP_POW * power);
-            this.parent.position.y += (1.5 * power * power);
             this.startAnimation("JUMP");
+            this._lastJumpTime = Date.now();
             this.isOnGround = false;
         };
-        Player.prototype.Accelerate = function (factor) {
-            this.startAnimation("RUN");
-            this.velocity.z -= (factor * this.BASE_ACCELERATION);
+        Player.prototype.Accelerate = function (force) {
+            if (force > 0) {
+                this.startAnimation("RUN");
+            }
+            else if (force < 0) {
+                this.startAnimation("REVERSE");
+            }
+            this.velocity.z -= (force * this.BASE_ACCELERATION * this._lastFrameFactor);
         };
         Player.prototype.Rescue = function () {
             if (Date.now() - this._lastRescueTime < 5000)
@@ -1036,29 +1177,18 @@ var GAME;
                 }
             }
         };
-        Player.prototype.RotateTo = function (targetRot) {
+        Player.prototype.RotateTo = function (rotationDirection) {
             if (this.CurrentRotation > Math.PI * 2) {
                 this.CurrentRotation -= Math.PI * 2;
             }
             else if (this.CurrentRotation < -Math.PI * 2) {
                 this.CurrentRotation += Math.PI * 2;
             }
-            if (this.CurrentRotation == targetRot)
-                return;
-            var diff = targetRot - this.CurrentRotation;
-            if (diff > Math.PI) {
-                diff -= Math.PI * 2;
-            }
-            else if (diff < -Math.PI) {
-                diff += Math.PI * 2;
-            }
-            if (Math.abs(diff) > Math.PI / 10) {
-                diff /= this.ROTATION_APPROXIMATOR;
-            }
-            this.parent.rotate(BABYLON.Axis.Y, diff, 0 /* LOCAL */);
-            this.CurrentRotation += diff;
+            var actualRotationDelta = rotationDirection * this.ROTATION_APPROXIMATOR * this._lastFrameFactor;
+            this.parent.rotate(BABYLON.Axis.Y, actualRotationDelta, 0 /* LOCAL */);
+            this.CurrentRotation += actualRotationDelta;
         };
-        Player.prototype.ReadKeys = function (keys) {
+        Player.prototype.EvaluateKeyState = function (keys) {
             if (!this.IsEnabled)
                 return;
             if (keys[32] > 0) {
@@ -1088,12 +1218,12 @@ var GAME;
                         this.startAnimation("STAY");
                         break;
                     case 21:
-                        this.Accelerate(1);
-                        this.RotateTo(-Math.PI / 2);
+                        this.Accelerate(0);
+                        this.RotateTo(-1);
                         break;
                     case 22:
                         this.Accelerate(0.707106781);
-                        this.RotateTo(-Math.PI / 4);
+                        this.RotateTo(-0.5);
                         break;
                     case 12:
                         this.Accelerate(1);
@@ -1101,23 +1231,22 @@ var GAME;
                         break;
                     case 2:
                         this.Accelerate(0.707106781);
-                        this.RotateTo(Math.PI / 4);
+                        this.RotateTo(0.5);
                         break;
                     case 1:
-                        this.Accelerate(1);
-                        this.RotateTo(Math.PI / 2);
+                        this.Accelerate(0);
+                        this.RotateTo(1);
                         break;
                     case 0:
-                        this.Accelerate(0.707106781);
-                        this.RotateTo(3 * Math.PI / 4);
+                        this.Accelerate(-0.3535533905);
+                        this.RotateTo(0.5);
                         break;
                     case 10:
-                        this.Accelerate(1);
-                        this.RotateTo(Math.PI);
+                        this.Accelerate(-0.5);
                         break;
                     case 20:
-                        this.Accelerate(0.707106781);
-                        this.RotateTo(-Math.PI * 3 / 4);
+                        this.Accelerate(-0.3535533905);
+                        this.RotateTo(-0.5);
                         break;
                 }
             }
@@ -1157,6 +1286,7 @@ var GAME;
                 _super.call(this, gameWorld);
             }
             AnimalScene.prototype.BuildSceneAround = function (scene) {
+                scene.disablePhysicsEngine();
                 this._gameWorld._lights = [];
                 var light = new BABYLON.PointLight("sun", new BABYLON.Vector3(-1359, 260, -3040), scene);
                 light.intensity = 3;
@@ -1176,7 +1306,7 @@ var GAME;
                 this._gameWorld._camera = camera;
                 camera.attachControl(this._gameWorld._canvas);
                 camera.maxZ = 10000;
-                camera.speed = 8;
+                camera.speed = 18;
                 var animals = {};
                 var animalNames = ['bearBlack', 'chowchow', 'deer', 'elk', 'fox', 'horse', 'moose', 'mountainlion', 'parrot', 'tarbuffaloA', 'vulture', 'wolf', 'goldenRetreiver'];
                 var loader = BABYLON.SceneLoader;
@@ -1190,7 +1320,6 @@ var GAME;
                             console.log(_animal + " loaded.");
                             animals[_animal] = x[0];
                             var a = Cast(x[0]);
-                            Cast(scene)._physicsEngine._unregisterMesh(a);
                             a.position.x = index * 60;
                             a.position.z = index * 80;
                             var shaderMaterial = new BABYLON.ShaderMaterial("flatShader", scene, "flat", {
@@ -1210,7 +1339,7 @@ var GAME;
                                 });
                             }
                         }, null, function (x) {
-                            console.error("Failed to load.", arguments);
+                            console.error(animal + " failed to load.", arguments);
                         });
                     })();
                 }
@@ -1253,7 +1382,7 @@ var GAME;
                 this._useFlatShading = parameters.useFlatShading || false;
                 this._character = parameters.character;
                 this._mapParams = mapParameters;
-                this.followPlayer = true;
+                this.followPlayer = false;
                 _super.call(this, gameWorld);
             }
             ExploreScene.prototype.addLightsAndCamera = function (scene) {
@@ -1268,9 +1397,14 @@ var GAME;
                 antiLight.diffuse.b = 0.7;
                 this._gameWorld._lights.push(antiLight);
                 this._gameWorld._lights.push(light);
-                this.mainCamera = new BABYLON.FollowCamera("camera", new BABYLON.Vector3(0, 1000, 0), scene);
-                this.mainCamera.maxZ = 10000;
-                this.mainCamera.speed = 8;
+                var camera = new BABYLON.FreeCamera("Camera", new BABYLON.Vector3(0, 250, 0), scene);
+                camera.ellipsoid = new BABYLON.Vector3(8, 10, 8);
+                if (this._gameWorld._camera)
+                    this._gameWorld._camera.dispose();
+                this._gameWorld._camera = camera;
+                camera.attachControl(this._gameWorld._canvas);
+                camera.maxZ = 10000;
+                camera.speed = 8;
             };
             ExploreScene.prototype.addSkyDome = function (scene) {
                 var skybox = BABYLON.Mesh.CreateBox("skyBox", 5000.0, scene);
@@ -1332,6 +1466,7 @@ var GAME;
             ExploreScene.prototype.createPlayer = function (scene, meshName) {
                 var _this = this;
                 var playerMesh;
+                this.player = new GAME.Player(scene, this.mountains);
                 BABYLON.SceneLoader.ImportMesh([meshName], "/models/", meshName + ".babylon", scene, function (x) {
                     playerMesh = Cast(x[0]);
                     playerMesh.material = _this._flatShader;
@@ -1346,7 +1481,6 @@ var GAME;
                     cameraFollowTarget.material = new BABYLON.StandardMaterial("fakeMat", scene);
                     cameraFollowTarget.isVisible = false;
                     cameraFollowTarget.position = parent.position.clone();
-                    _this.player = new GAME.Player(scene, _this.mountains);
                     _this.player.Initialize(playerMesh);
                     scene.registerBeforeRender(function () {
                         if (_this.followPlayer && !_this.mainCamera.target) {
@@ -1358,7 +1492,7 @@ var GAME;
                             _this.mainCamera.target = cameraFollowTarget;
                             _this.mainCamera.setTarget(cameraFollowTarget.position);
                         }
-                        else if (_this.mainCamera.target) {
+                        else if (_this.mainCamera && _this.mainCamera.target) {
                             var moveTarget = parent.position.subtract(cameraFollowTarget.position);
                             moveTarget.scaleInPlace(0.15);
                             cameraFollowTarget.position.addInPlace(moveTarget);
@@ -1391,6 +1525,46 @@ var GAME;
                 this.generateLandscape(scene);
                 this.putStartAndEnd(scene);
                 this.createPlayer(scene, this._character);
+                var weirdShader = new BABYLON.ShaderMaterial("weirdShader", scene, "weird", {
+                    attributes: ["position", "normal"],
+                    uniforms: ["world", "worldView", "worldViewProjection"]
+                });
+                scene.registerBeforeRender(function () {
+                    weirdShader.setFloat("time", (Date.now() / 1000) % (Math.PI * 2));
+                });
+                var randomizer = new MersenneTwister(this._randomSeed);
+                var testRay = new BABYLON.Ray(BABYLON.Vector3.Zero(), BABYLON.Axis.Y.scale(-1));
+                var collectibles = [];
+                for (var i = 0; i < 50;) {
+                    var x = randomizer.Random() * this._mapParams.width - this._mapParams.width / 2;
+                    var z = randomizer.Random() * this._mapParams.height - this._mapParams.height / 2;
+                    testRay.origin.x = x;
+                    testRay.origin.z = z;
+                    var intersex = this.mountains.intersects(testRay, false);
+                    if (intersex.hit && intersex.pickedPoint.y < 25) {
+                        switch (Math.floor(Math.random() * 3)) {
+                            case 0:
+                                var collectible = BABYLON.Mesh.CreateSphere("Sphere" + i++, 20, 10, scene, false);
+                                break;
+                            case 1:
+                                collectible = BABYLON.Mesh.CreateTorus("Torus" + i++, 5, 2, 60, scene, false);
+                                break;
+                            case 2:
+                                collectible = BABYLON.Mesh.CreateTorusKnot("TorusKnot" + i++, 2, 1, 80, 30, 3, 4, scene, false);
+                                break;
+                        }
+                        collectible.position = intersex.pickedPoint.clone();
+                        collectible.position.y += randomizer.Random() * 15 + 10;
+                        var axis = new BABYLON.Vector3(Math.random(), Math.random(), Math.random());
+                        axis.normalize();
+                        collectible.rotate(axis, Math.random() * Math.PI, 0 /* LOCAL */);
+                        collectible.material = weirdShader;
+                        collectibles.push(collectible);
+                    }
+                }
+                scene.registerBeforeRender(function () {
+                    collectibles.forEach(function (e) { return e.rotate(BABYLON.Axis.Y, 0.02, 0 /* LOCAL */); });
+                });
                 return scene;
             };
             return ExploreScene;
@@ -1501,7 +1675,10 @@ var GUI = (function () {
         }
     }
     GUI.prototype.Reload = function () {
-        this._gameWorld.Load(this.properties);
+        var _this = this;
+        this._gameWorld.Load(this.properties).then(function () {
+            _this._gameWorld.StartRenderLoop();
+        });
     };
     GUI.prototype.AttachTo = function (gameWorld) {
         this._gameWorld = gameWorld;
@@ -1556,7 +1733,7 @@ var TERRAIN;
         function HeightMapGenerator(params) {
             this.Parameters = params;
             this.Canvas = CreateCanvas(params.width, params.height, true, "mainNoiseCanvas", function (c) {
-                c.style.display = "none";
+                c.style.display = params.displayCanvas ? "block" : "none";
             });
         }
         HeightMapGenerator.prototype.GenerateHeightMap = function () {
@@ -1568,29 +1745,29 @@ var TERRAIN;
                 ctx.drawImage(image, 0, 0);
                 return this.Canvas;
             }
-            var random = this.Parameters.random;
-            var noiseGenerator = new TERRAIN.ComplexNoiseGenerator();
-            noiseGenerator.AddStep(function (tg) {
+            var cplxNoiseGenerator = new TERRAIN.ComplexNoiseGenerator();
+            cplxNoiseGenerator.AddStep(function (tg) {
                 var noiseGen = new TERRAIN.PerlinNoiseGenerator({
                     displayCanvas: _this.Parameters.displayCanvas,
                     height: _this.Parameters.height,
                     width: _this.Parameters.width,
-                    random: random,
+                    randomSeed: _this.Parameters.randomSeed,
                     param: _this.Parameters.param || 1.1
                 });
                 var noiseCanvas = noiseGen.Generate();
                 tg.DraftCanvases["noiseCanvas"] = noiseCanvas;
                 return true;
             }, "Perlin noise generation");
-            noiseGenerator.AddStep(function (tg) {
+            cplxNoiseGenerator.AddStep(function (tg) {
                 var SHRINK = _this.Parameters.shrink;
                 var pathCanvas = CreateCanvas(_this.Parameters.width / SHRINK, _this.Parameters.height / SHRINK, _this.Parameters.displayCanvas, "ravinePathCanvas");
-                var pathGen = new TERRAIN.PathGenerator(random);
+                var pathRandomProvider = new MersenneTwister(_this.Parameters.randomSeed);
+                var pathGen = new TERRAIN.PathGenerator(pathRandomProvider, 1);
                 pathGen.MakePath(pathCanvas, _this.Parameters.pathBottomOffset / SHRINK, _this.Parameters.pathTopOffset / SHRINK);
                 tg.DraftCanvases["pathCanvas"] = pathCanvas;
                 return true;
             }, "Path generation");
-            noiseGenerator.AddStep(function (tg) {
+            cplxNoiseGenerator.AddStep(function (tg) {
                 var pathCanvas = tg.DraftCanvases["pathCanvas"];
                 var bleedBlurPass1 = new FILTERS.BleedFeed(pathCanvas, 30, 6, true);
                 if (bleedBlurPass1.Check(pathCanvas))
@@ -1603,13 +1780,14 @@ var TERRAIN;
                     bleedBlurPass3.Apply(pathCanvas);
                 return true;
             }, "Path blurring");
-            noiseGenerator.AddStep(function (tg) {
+            cplxNoiseGenerator.AddStep(function (tg) {
                 var snCanvas = CreateCanvas(_this.Parameters.width / 2, _this.Parameters.height / 2, _this.Parameters.displayCanvas, "secondaryNoiseCanvas");
                 var ctx = snCanvas.getContext("2d");
-                var pathGen = new TERRAIN.PathGenerator(random);
+                var random = new MersenneTwister(_this.Parameters.randomSeed);
+                var pathGen = new TERRAIN.PathGenerator(random, 1);
                 ctx.save();
                 for (var i = 0; i < _this.Parameters.destructionLevel; i++) {
-                    pathGen.MakePath(snCanvas, (random.Random() * snCanvas.width) | 0, (random.Random() * snCanvas.width) | 0, i == 0);
+                    pathGen.MakePath(snCanvas, (random.Random() * snCanvas.width) | 0, (random.Random() * snCanvas.width) | 0, undefined, undefined, i == 0);
                     var randomOffset = random.Random() * snCanvas.width;
                     ctx.translate(snCanvas.width / 2 + randomOffset, snCanvas.height / 2);
                     ctx.rotate(random.Random() * 360);
@@ -1625,7 +1803,7 @@ var TERRAIN;
                 tg.DraftCanvases["snCanvas"] = snCanvas;
                 return true;
             }, "Secondary noise generation");
-            noiseGenerator.AddStep(function (tg) {
+            cplxNoiseGenerator.AddStep(function (tg) {
                 var noiseCanvas = tg.DraftCanvases["noiseCanvas"];
                 var pathCanvas = tg.DraftCanvases["pathCanvas"];
                 var snCanvas = tg.DraftCanvases["snCanvas"];
@@ -1642,7 +1820,7 @@ var TERRAIN;
                 return true;
             }, "Noise compositing");
             Trace("Terrain");
-            var noise = noiseGenerator.GenerateOn(this.Canvas);
+            var noise = cplxNoiseGenerator.GenerateOn(this.Canvas);
             Trace("Terrain");
             return noise;
         };
@@ -1800,23 +1978,20 @@ var MersenneTwister = (function () {
 var TERRAIN;
 (function (TERRAIN) {
     var PathGenerator = (function () {
-        function PathGenerator(random) {
+        function PathGenerator(random, pathWidth) {
             this.random = random;
+            this.pathWidth = pathWidth;
         }
-        PathGenerator.prototype.MakePath = function (canvas, from, to, opaque) {
+        PathGenerator.prototype.MakePath = function (canvas, fromX, toX, fromY, toY, opaque) {
             if (opaque === void 0) { opaque = true; }
-            var ctrlPoints = this.GeneratePath(canvas, from, to);
-            var cmspline = this.makeCatmull(ctrlPoints);
+            var ctrlPoints = this.GenerateControlPoints(canvas, fromX, toX, fromY, toY);
+            var cmspline = this.MakeCatmull(ctrlPoints);
             this.drawPath(canvas, cmspline, opaque);
             return canvas;
         };
-        PathGenerator.prototype.GeneratePath = function (canvas, from, to) {
-            from = from && [from] || [from, from];
-            to = to && [to] || [to, to];
-            from[0] = from[0] || 0;
-            to[0] = to[0] || canvas.width;
-            from[1] = from[1] || canvas.height;
-            to[1] = to[1] || 0;
+        PathGenerator.prototype.GenerateControlPoints = function (canvas, fromX, toX, fromY, toY) {
+            var from = [fromX || 0, fromY || canvas.height];
+            var to = [toX || canvas.width, toY || 0];
             var STEPS = 10;
             var ITERATIONS = 15;
             var dx = (to[0] - from[0]) / STEPS;
@@ -1865,7 +2040,7 @@ var TERRAIN;
                 ctx.stroke();
             }
         };
-        PathGenerator.prototype.makeCatmull = function (anchors) {
+        PathGenerator.prototype.MakeCatmull = function (anchors) {
             var _points = [];
             for (var i = 0; i < anchors.length - 3; i++) {
                 var diff = Math.abs(anchors[i + 1][1] - anchors[i + 2][1]);
@@ -1885,6 +2060,7 @@ var TERRAIN;
             }
             ctx.moveTo(points[0][0], points[0][1]);
             ctx.beginPath();
+            ctx.lineWidth = this.pathWidth;
             for (var j = 0; j < points.length; j++)
                 ctx.lineTo(points[j][0], points[j][1]);
             ctx.stroke();
@@ -1900,7 +2076,7 @@ var TERRAIN;
         function PerlinNoiseGenerator(inParameters) {
             this.Canvas = CreateCanvas(inParameters.width, inParameters.height, inParameters.displayCanvas);
             this.Parameters = inParameters;
-            this.Random = inParameters.random;
+            this.Random = new MersenneTwister(this.Parameters.randomSeed);
         }
         PerlinNoiseGenerator.prototype.randomNoise = function (separateCanvas, displayCanvas) {
             var noiseCanvas = separateCanvas ? CreateCanvas(this.Parameters.width, this.Parameters.height, displayCanvas) : this.Canvas;
@@ -1931,35 +2107,6 @@ var TERRAIN;
     })();
     TERRAIN.PerlinNoiseGenerator = PerlinNoiseGenerator;
 })(TERRAIN || (TERRAIN = {}));
-var UTILS;
-(function (UTILS) {
-    function Clamp(scalar, min, max) {
-        return Math.max(Math.min(scalar, max), min);
-    }
-    UTILS.Clamp = Clamp;
-    function Mixin(mixThis, toThis, dontTouchExistingProperties) {
-        var f = dontTouchExistingProperties;
-        var fromKeys = Object.keys(mixThis);
-        var toKeys = Object.keys(toThis);
-        for (var i = 0; i < fromKeys.length; i++) {
-            var key = fromKeys[i];
-            if (toThis.hasOwnProperty(key) && f)
-                continue;
-            else {
-                if (toThis[key] instanceof Object && mixThis[key] instanceof Object) {
-                    Mixin(mixThis[key], toThis[key], f);
-                }
-                else {
-                    if (mixThis[key] !== "undedfined" && mixThis[key] !== null) {
-                        toThis[key] = mixThis[key];
-                    }
-                }
-            }
-        }
-        return toThis;
-    }
-    UTILS.Mixin = Mixin;
-})(UTILS || (UTILS = {}));
 var TERRAIN;
 (function (TERRAIN) {
     var TerrainGenerator = (function () {
@@ -1997,17 +2144,11 @@ var TERRAIN;
         TerrainGenerator.prototype.ColorizeMesh = function (mesh) {
             var positionData = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
             var colorData = [];
-            Trace("Mapping");
-            var copy = positionData.map(function (x, i) {
-                return i % 3 == 1 ? x : 0;
-            });
-            Trace("Mapping");
-            Trace("Min/Max");
-            console.log("Total number of vertices:" + copy.length / 3);
-            this._maxHeight = Math.max.apply(null, copy);
-            this._minHeight = Math.min.apply(null, copy);
+            var maxVec = mesh.getBoundingInfo().boundingBox.maximum;
+            var minVec = mesh.getBoundingInfo().boundingBox.minimum;
+            this._maxHeight = maxVec.y;
+            this._minHeight = minVec.y;
             var heightScale = this._maxHeight - this._minHeight;
-            Trace("Min/Max");
             Trace("Color fetching");
             for (var i = 1; i < positionData.length; i += 3) {
                 var h = (positionData[i] - this._minHeight) / heightScale;
@@ -2135,3 +2276,54 @@ var TERRAIN;
     })();
     TERRAIN.ComplexNoiseGenStep = ComplexNoiseGenStep;
 })(TERRAIN || (TERRAIN = {}));
+var UTILS;
+(function (UTILS) {
+    function Clamp(scalar, min, max) {
+        return Math.max(Math.min(scalar, max), min);
+    }
+    UTILS.Clamp = Clamp;
+    function Mixin(mixThis, toThis, dontTouchExistingProperties) {
+        var f = dontTouchExistingProperties;
+        var fromKeys = Object.keys(mixThis);
+        var toKeys = Object.keys(toThis);
+        for (var i = 0; i < fromKeys.length; i++) {
+            var key = fromKeys[i];
+            if (toThis.hasOwnProperty(key) && f)
+                continue;
+            else {
+                if (toThis[key] instanceof Object && mixThis[key] instanceof Object) {
+                    Mixin(mixThis[key], toThis[key], f);
+                }
+                else {
+                    if (mixThis[key] !== "undedfined" && mixThis[key] !== null) {
+                        toThis[key] = mixThis[key];
+                    }
+                }
+            }
+        }
+        return toThis;
+    }
+    UTILS.Mixin = Mixin;
+    var Chainable = (function () {
+        function Chainable(followup) {
+            this.callbacks = [];
+            if (followup) {
+                this.callbacks.push(followup);
+            }
+        }
+        Chainable.prototype.then = function (followup) {
+            this.callbacks.push(followup);
+            return this;
+        };
+        Chainable.prototype.call = function () {
+            var args = arguments;
+            while (this.callbacks.length) {
+                var callback = this.callbacks.shift();
+                args = callback.apply(callback, args);
+            }
+            return args;
+        };
+        return Chainable;
+    })();
+    UTILS.Chainable = Chainable;
+})(UTILS || (UTILS = {}));

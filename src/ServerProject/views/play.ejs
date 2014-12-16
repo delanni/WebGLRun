@@ -12,8 +12,10 @@
     <div id="countdownElement" class="hide">X</div>
     <div id="doormat">
         <div class="playerContainer">
-            <h1 id="player1">P1: .............</h1>
-            <h1 id="player2">P2: ...waiting...</h1>
+            <h3>Share this URL with a friend to play:</h3>
+            <h2 id="gameUrl"></h2>
+            <h3 id="player1" class="notReady">You: ........</h3>
+            <h3 id="player2" class="notReady">Opponent: ......</h3>
         </div>
         <button id="readyButton" data-is-ready="false" class="notReady">Ready!</button>
     </div>
@@ -22,11 +24,10 @@
     </div>
     <!-- Include all the third party stuff -->
     <script type="text/javascript" src="/scripts/Lib/dat.gui.js"></script>
-    <script type="text/javascript" src="/scripts/Lib/cannon.js"></script>
     <script type="text/javascript" src="/scripts/Lib/socket.io-1.2.0.js"></script>
     <script type="text/javascript" src="/scripts/Lib/babylon.1.14-dbg.js"></script>
-    <script type="text/javascript" src="/scripts/Lib/oimo.js"></script>
     <script type="text/javascript" src="/scripts/Lib/StackBlur.js"></script>
+    <script type="text/javascript" src="/scripts/Lib/oimo.js"></script>
 
     <!-- Penultimately the compilation result of my .TS files-->
     <script type="text/javascript" src="/scripts/Lib/compiled.js"></script>
@@ -36,6 +37,8 @@
         (function (params) {
             var socket = window.socket =  new io(<%- "'" + "/"+gameId + "'" %>);
             var game = window.game =  new GAME.GameWorld("mainCanvas", params, socket, "hard");
+
+            var myName = params.gameParameters.name;
 
             document.getElementById("readyButton").onclick=function(){
                 var isReady = this.dataset['isReady'] == "false";
@@ -49,12 +52,23 @@
                     this.classList.add("notReady");
                     this.textContent = "Ready";
                 }
-                socket.emit("readyStateChanged", {isReady:isReady, timestamp:Date.now()});
+                socket.emit("readyStateChanged", {isReady:isReady, name: myName, timestamp:Date.now()});
             }
 
             socket.on("startGame",function(){
                 document.getElementById("doormat").classList.add("hide");
                 document.getElementById("countdownElement").classList.remove("hide");
+            });
+
+            socket.on("readyStateChanged",function(info){
+                var r = info.isReady;
+                if (document.getElementById("player1").dataset.name == info.name){
+                    document.getElementById("player1").classList.remove(r?"notReady":"ready");
+                    document.getElementById("player1").classList.add(r?"ready":"notReady");
+                } else if (document.getElementById("player2").dataset.name == info.name) {
+                    document.getElementById("player2").classList.remove(r?"notReady":"ready");
+                    document.getElementById("player2").classList.add(r?"ready":"notReady");
+                }
             });
 
             window.onmessage = function(evt){
@@ -71,15 +85,19 @@
                     }
                 } else if (evt.data.playerInfo){
                     var playerInfo = evt.data.playerInfo;
-                    if (params.gameParameters.name==playerInfo.name){
-                        document.getElementById("player1").textContent = "P1: " + playerInfo.name;
+                    if (playerInfo.playerType == "player"){
+                        document.getElementById("player1").textContent = "You: " + playerInfo.name;
+                        document.getElementById("player1").dataset.name = playerInfo.name;
                     } else {
-                        document.getElementById("player2").textContent = "P2: " + playerInfo.name;
+                        document.getElementById("player2").textContent = "Opponent: " + playerInfo.name;
+                        document.getElementById("player2").dataset.name = playerInfo.name;
                     }
                 }
             }
 
             game.Load(params);
+
+            document.getElementById("gameUrl").textContent = window.location.href;
 
         })(<%- JSON.stringify({mapParameters:mapParams,gameParameters:gameParams}) %>);
     </script>

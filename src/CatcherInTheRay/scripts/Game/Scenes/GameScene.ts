@@ -14,9 +14,9 @@
             _debug: boolean;
             _useFlatShading: boolean;
             _mapParams: TERRAIN.TerrainGeneratorParams;
-            _physicsEngine: BABYLON.OimoJSPlugin;
             _character: string;
-            _flatShader: BABYLON.ShaderMaterial;
+            _flatShaderMat: BABYLON.ShaderMaterial;
+            _weirdShaderMat: BABYLON.ShaderMaterial;
 
             mainCamera: BABYLON.FollowCamera;
             followPlayer: boolean;
@@ -90,8 +90,6 @@
 
                 // Terrain from the heightmap
                 var terrainGenerator = new TERRAIN.TerrainGenerator(this._mapParams);
-
-                // Heightmap to mesh
                 Trace("Mesh from height map");
                 var mountainMesh = terrainGenerator.ConvertNoiseToBabylonMesh(noise, scene);
                 mountainMesh.name = "MountainMesh";
@@ -108,13 +106,17 @@
                 Trace("Colorize mesh");
 
                 if (this._useFlatShading) {
-                    mountainMesh.material = this._flatShader;
+                    // Apply flat shading
+                    mountainMesh.material = this._flatShaderMat;
                 } else {
+                    // Apply gouraud shading material
                     var mountainMaterial = new BABYLON.StandardMaterial("groundMaterial", scene);
                     mountainMesh.material = mountainMaterial;
                     mountainMaterial.specularPower = 0;
                     mountainMaterial.specularColor = BABYLON.Color3.FromInts(0, 0, 0);
                 }
+
+                // Set up miscellanius stuff
                 mountainMesh.checkCollisions = true;
                 mountainMesh.subdivide(Cast<BABYLON.GroundMesh>(mountainMesh).subdivisions);
                 mountainMesh.createOrUpdateSubmeshesOctree();
@@ -122,6 +124,7 @@
                 this.mountains = mountainMesh;
                 this.mountains.material.wireframe = false;
 
+                // Set up wrapper's mesh
                 var mountainSideMaterial = new BABYLON.StandardMaterial("mountainSideMaterial", scene);
                 wrappingMesh.material = mountainSideMaterial;
                 mountainSideMaterial.specularPower = 0;
@@ -153,7 +156,7 @@
 
                 BABYLON.SceneLoader.ImportMesh([meshName], "/models/", meshName + ".babylon", scene, x=> {
                     playerMesh = Cast<BABYLON.Mesh>(x[0]);
-                    playerMesh.material = this._flatShader;
+                    playerMesh.material = this._flatShaderMat;
                     playerMesh.position = new BABYLON.Vector3(0, -5, 0);
                     playerMesh.rotate(BABYLON.Axis.Y, Math.PI, BABYLON.Space.LOCAL);
 
@@ -163,7 +166,6 @@
                     playerMesh.parent = parent;
                     parent.position = this.startOrb.position.clone();
                     parent.position.x += this._gameWorld.parameters.gameParameters.isHost ? 20 : -20;
-                    //parent.position.z += this._gameWorld.parameters.gameParameters.isHost ? 0 : -20;
 
                     var cameraFollowTarget = BABYLON.Mesh.CreateSphere("fakeKid", 30, 2, scene, false);
                     cameraFollowTarget.material = new BABYLON.StandardMaterial("fakeMat", scene);
@@ -188,7 +190,7 @@
                             this.mainCamera.rotationOffset = UTILS.Clamp((this.player.CurrentRotation % Math.PI) / Math.PI * 180, -45, 45);
                         }
                     });
-                });
+                }, null, () => { console.error("Mesh loading error") });
 
                 return this.player;
             }
@@ -201,7 +203,7 @@
 
                 BABYLON.SceneLoader.ImportMesh([meshName], "/models/", meshName + ".babylon", scene, x=> {
                     enemyMesh = Cast<BABYLON.Mesh>(x[0]);
-                    enemyMesh.material = this._flatShader;
+                    enemyMesh.material = this._flatShaderMat;
                     enemyMesh.position = new BABYLON.Vector3(0, -5, 0);
                     enemyMesh.rotate(BABYLON.Axis.Y, Math.PI, BABYLON.Space.LOCAL);
 
@@ -213,14 +215,13 @@
                     parent.position.x += this._gameWorld.parameters.gameParameters.isHost ? -20 : 20;
 
                     this.enemy.Initialize(enemyMesh);
-                });
+                }, null, () => { console.error("Mesh loading error") });
 
                 return this.enemy;
             }
 
-           
 
-            private createFlatShader(): void {
+            private createShaders(): void {
                 var scene = this._scene;
 
                 var flatShader = new BABYLON.ShaderMaterial("flatShader", scene, "flat", {
@@ -241,14 +242,61 @@
 
                 // todo: look into soft shadows?
 
-                this._flatShader = flatShader;
+                this._flatShaderMat = flatShader;
+
+                var weirdShader = new BABYLON.ShaderMaterial("weirdShader", scene, "weird", {
+                    attributes: ["position", "normal"],
+                    uniforms: ["world", "worldView", "worldViewProjection"]
+                });
+
+                scene.registerBeforeRender(() => {
+                    weirdShader.setFloat("time", (Date.now() / 1000) % (Math.PI * 2));
+                });
+
+                this._weirdShaderMat = weirdShader;
+            }
+
+            collectibles: BABYLON.Mesh[] = [];
+            public DropCollectibles(): void {
+                var randomizer = new MersenneTwister(this._randomSeed);
+                var testRay = new BABYLON.Ray(BABYLON.Vector3.Zero(), BABYLON.Axis.Y.scale(-1));
+                for (var i = 0; i < 50;) {
+                    var x = (randomizer.Random() * this._mapParams.width - this._mapParams.width / 2) * 0.9;
+                    var z = (randomizer.Random() * this._mapParams.height - this._mapParams.height / 2) * 0.9;
+                    testRay.origin.x = x;
+                    testRay.origin.z = z;
+                    var intersex = this.mountains.intersects(testRay, false);
+                    if (intersex.hit && intersex.pickedPoint.y < 25) {
+                        switch (Math.floor(Math.random() * 3)) {
+                            case 0:
+                                var collectible = BABYLON.Mesh.CreateSphere("Sphere" + i++, 20, 10, this._scene, false);
+                                break;
+                            case 1:
+                                collectible = BABYLON.Mesh.CreateTorus("Torus" + i++, 5, 2, 60, this._scene, false);
+                                break;
+                            case 2:
+                                collectible = BABYLON.Mesh.CreateTorusKnot("TorusKnot" + i++, 2, 1, 80, 30, 3, 4, this._scene, false);
+                                break;
+                        }
+                        collectible.position = intersex.pickedPoint.clone();
+                        collectible.position.y += randomizer.Random() * 15 + 10;
+                        var axis = new BABYLON.Vector3(Math.random(), Math.random(), Math.random());
+                        axis.normalize();
+                        collectible.rotate(axis, Math.random() * Math.PI, BABYLON.Space.LOCAL);
+                        collectible.material = this._weirdShaderMat;
+                        this.collectibles.push(collectible);
+                    }
+                }
+                this._scene.registerBeforeRender(() => {
+                    this.collectibles.forEach(e=> e.rotate(BABYLON.Axis.Z, 0.02, BABYLON.Space.LOCAL));
+                });
             }
 
             public BuildSceneAround(scene: BABYLON.Scene): BABYLON.Scene {
 
                 this.addLightsAndCamera();
 
-                this.createFlatShader();
+                this.createShaders();
 
                 this.addSkyDome();
 
@@ -257,6 +305,8 @@
                 this.putStartAndEnd();
 
                 this.CreatePlayer(this._character);
+
+                this.DropCollectibles();
 
                 return scene;
             }

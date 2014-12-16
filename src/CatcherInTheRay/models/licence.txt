@@ -5,3 +5,4 @@ http://www.ro.me
 https://github.com/dataarts/3-dreams-of-black
 
 The models were noted under a CC license, thus remixing and reusing for non-commercial use is allowed.
+http://creativecommons.org/licenses/by-nc-sa/3.0/
