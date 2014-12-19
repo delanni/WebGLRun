@@ -12,28 +12,23 @@ module GAME {
                 scene.disablePhysicsEngine();
 
                 // Adding light
-                this._gameWorld._lights = [];
-
                 var light = new BABYLON.PointLight("sun", new BABYLON.Vector3(-1359, 260, -3040), scene);
                 light.intensity = 3;
                 light.diffuse.g = 0.7;
                 light.diffuse.b = 0.7;
-                this._gameWorld._lights.push(light);
-
 
                 var antiLight = new BABYLON.PointLight("antiSun", new BABYLON.Vector3(1359, 260, 3040), scene);
                 antiLight.intensity = .5;
                 antiLight.diffuse.g = 0.7;
                 antiLight.diffuse.b = 0.7;
-                this._gameWorld._lights.push(antiLight);
 
                 // Camera
                 var camera = new BABYLON.FreeCamera("Camera", new BABYLON.Vector3(0, 250, 0), scene);
                 camera.ellipsoid = new BABYLON.Vector3(8, 10, 8);
                 camera.checkCollisions = true;
-                if (this._gameWorld._camera) this._gameWorld._camera.dispose();
-                this._gameWorld._camera = camera;
-                camera.attachControl(this._gameWorld._canvas);
+                if (this._gameWorld.camera) this._gameWorld.camera.dispose();
+                this._gameWorld.camera = camera;
+                camera.attachControl(this._gameWorld.canvas);
                 camera.maxZ = 10000;
                 camera.speed = 18;
 

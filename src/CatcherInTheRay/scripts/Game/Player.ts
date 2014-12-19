@@ -15,31 +15,38 @@
     }
 
     export class Player {
-        INTERSECTION_TRESHOLD: number = 4;
-        BASE_ACCELERATION: number = 2;
-        BASE_JUMP_POW: number = 2.8;
-        LAND_COOLDOWN: number = 100;
-        ROTATION_APPROXIMATOR: number = 1/8;
-        TIMEFACTOR: number = 24;
-        MINVECTOR: BABYLON.Vector3 = new BABYLON.Vector3(-2, -15, -2);
-        MAXVECTOR: BABYLON.Vector3 = new BABYLON.Vector3(2, 15, 0.7);
-        GRAVITY: BABYLON.Vector3 = new BABYLON.Vector3(0, -0.15, 0);
+        private INTERSECTION_TRESHOLD: number = 4;
+        private BASE_ACCELERATION: number = 2;
+        private BASE_JUMP_POW: number = 1.8;
+        private LAND_COOLDOWN: number = 100;
+        private ROTATION_APPROXIMATOR: number = 1/8;
+        private TIMEFACTOR: number = 24;
+        private MINVECTOR: BABYLON.Vector3 = new BABYLON.Vector3(-2, -15, -2);
+        private MAXVECTOR: BABYLON.Vector3 = new BABYLON.Vector3(2, 15, 0.7);
+        private GRAVITY: BABYLON.Vector3 = new BABYLON.Vector3(0, -0.15, 0);
+
+        private _animationObject: BABYLON.Animation;
+        private _scene: BABYLON.Scene;
+        private _bottomVector: BABYLON.Vector3;
+        private _ray: BABYLON.Ray;
+        private _ground: BABYLON.Mesh;
+
+        private _landTime: number = 0;
+        private _lastRescueTime: number = 0;
+        private _lastJumpTime: number = 0;
+        private _lastUpdateTime: number = 0;
+        private _latency: number = 0;
+
+        private _lastFrameFactor: number = 1;
+        private _totalFramesDuration: number = 900;
+        private _totalFramesCount: number = 50;
+        private _lastTickTime: number = Date.now();
+
+        Controller: any = { "32": 0, "87": 0, "68": 0, "83": 0, "65": 0, "82": 0 };
+        CurrentRotation: number = 0;
 
         mesh: BABYLON.Mesh;
         parent: BABYLON.Mesh;
-
-        _animationObject: BABYLON.Animation;
-        _scene: BABYLON.Scene;
-        _bottomVector: BABYLON.Vector3;
-        _ray: BABYLON.Ray;
-        _ground: BABYLON.Mesh;
-
-        Controller: any = { "32": 0, "87": 0, "68": 0, "83": 0, "65": 0, "82": 0 };
-        _landTime: number = 0;
-        _lastRescueTime: number = 0;
-        _lastJumpTime: number = 0;
-        CurrentRotation: number = 0;
-
         modelProperties: ICharacterModelDictionary;
         currentAnimation: BABYLON.Animatable;
         currentAnimationName: string;
@@ -52,9 +59,7 @@
 
         targetPosition: BABYLON.Vector3;
 
-        public SetEnabled(value: boolean) {
-            this.IsEnabled = value;
-        }
+ 
 
         constructor(scene: BABYLON.Scene, ground: BABYLON.Mesh) {
             this._scene = scene;
@@ -84,12 +89,10 @@
             this.parent.checkCollisions = true;
             this.parent.rotationQuaternion = new BABYLON.Quaternion(0, 0, 0, 1);
 
-            this._scene.registerBeforeRender(() => this._gameLoop());
+            this._scene.registerBeforeRender(() => this.gameLoop());
         }
 
-        _lastUpdateTime: number = 0;
-        _latency: number = 0;
-        public pushUpdate(positionData: any) {
+        public PushUpdate(positionData: any) {
             //basic
             if (positionData[3] > this._lastUpdateTime) {
                 this._lastUpdateTime = positionData[3];
@@ -106,18 +109,22 @@
             }
         }
 
-        _lastFrameFactor: number = 1;
-        _totalFramesDuration: number = 1800;
-        _totalFramesCount: number = 100;
-        _lastTickTime: number = Date.now();
-        private _gameLoop() {
+        public setEnabled(value: boolean) {
+            this.IsEnabled = value;
+            if (this.IsEnabled == false) {
+                this.velocity.scaleInPlace(0);
+                this.isOnGround = false;
+            }
+        }
+
+        private gameLoop() {
             // Use this method instead of BABYLON's times
             var lastFrameTime = Date.now() - this._lastTickTime;
             this._lastTickTime = Date.now();
             if (lastFrameTime > 1000) return;
             this._totalFramesDuration += lastFrameTime;
             this._totalFramesCount++;
-            if (this._totalFramesCount % 1000 == 0) {
+            if (this._totalFramesCount % 100 == 0) {
                 this._totalFramesCount /= 2;
                 this._totalFramesDuration /= 2;
             } else if (this._totalFramesCount % 10 == 0) {
@@ -146,7 +153,7 @@
             }
 
             // Read inputs from and act accordingly
-            this.EvaluateKeyState(this.Controller);
+            this.evaluateKeyState(this.Controller);
 
             // Limit speed
             this.velocity = BABYLON.Vector3.Clamp(this.velocity, this.MINVECTOR, this.MAXVECTOR);
@@ -181,21 +188,18 @@
                 this.parent.position = BABYLON.Vector3.Lerp(this.parent.position, this.targetPosition, 1 - Math.pow(0.8, this._lastFrameFactor));
                 if (this.parent.position.y < 0) this.parent.position.y = 1;
             }
-
         }
 
-
-
-        public Jump(power: number) {
+        private jump(power: number) {
             if (Date.now() - this._landTime < this.LAND_COOLDOWN) return;
             this.velocity.y = (this.BASE_JUMP_POW * power);
-            //this.parent.position.y += (2 * power * power) * this._lastFrameFactor;
+            this.parent.position.y += this.BASE_JUMP_POW;
             this.startAnimation("JUMP");
             this._lastJumpTime = Date.now();
             this.isOnGround = false;
         }
 
-        public Accelerate(force: number) {
+        private accelerate(force: number) {
             if (force > 0) {
                 this.startAnimation("RUN");
             } else if (force < 0) {
@@ -204,7 +208,7 @@
             this.velocity.z -= (force * this.BASE_ACCELERATION * this._lastFrameFactor);
         }
 
-        public Rescue() {
+        private rescue() {
             if (Date.now() - this._lastRescueTime < 5000) return;
             var down = BABYLON.Vector3.Up().negate();
             for (var i = 0; i < 16; i++) {
@@ -224,7 +228,7 @@
             }
         }
 
-        public RotateTo(rotationDirection: number) {
+        private rotate(rotationDirection: number) {
             if (this.CurrentRotation > Math.PI * 2) {
                 this.CurrentRotation -= Math.PI * 2;
             } else if (this.CurrentRotation < -Math.PI * 2) {
@@ -236,16 +240,16 @@
             this.CurrentRotation += actualRotationDelta;
         }
 
-        public EvaluateKeyState(keys: any) {
+        private evaluateKeyState(keys: any) {
             if (!this.IsEnabled) return;
             if (keys[32] > 0) {
                 if (this.isOnGround) {
-                    this.Jump(1);
+                    this.jump(1);
                     delete keys[32];
                 } else if (Date.now() - this._landTime > 3000) {
                     // unstuck
                     this._landTime = Date.now();
-                    this.Jump(1.5);
+                    this.jump(1.5);
                     delete keys[32];
                 }
             }
@@ -263,40 +267,40 @@
                         this.startAnimation("STAY");
                         break;
                     case 21: // go -90deg -PI/2rad
-                        this.Accelerate(0);
-                        this.RotateTo(-1);
+                        this.accelerate(0);
+                        this.rotate(-1);
                         break;
                     case 22: // go -45deg -PI/4rad
-                        this.Accelerate(0.707106781);
-                        this.RotateTo(-0.5);
+                        this.accelerate(0.707106781);
+                        this.rotate(-0.5);
                         break;
                     case 12: // go 0deg   0rad
-                        this.Accelerate(1);
-                        this.RotateTo(0);
+                        this.accelerate(1);
+                        this.rotate(0);
                         break;
                     case 2: // go 45deg PI/4rad
-                        this.Accelerate(0.707106781);
-                        this.RotateTo(0.5);
+                        this.accelerate(0.707106781);
+                        this.rotate(0.5);
                         break;
                     case 1: // go 90deg PI/2rad
-                        this.Accelerate(0);
-                        this.RotateTo(1);
+                        this.accelerate(0);
+                        this.rotate(1);
                         break;
                     case 0: //go 135deg 3PI/4rad
-                        this.Accelerate(-0.3535533905);
-                        this.RotateTo(0.5);
+                        this.accelerate(-0.3535533905);
+                        this.rotate(0.5);
                         break;
                     case 10: //go 180deg  PIrad
-                        this.Accelerate(-0.5);
+                        this.accelerate(-0.5);
                         break;
                     case 20: //go -135deg -3PI/4rad
-                        this.Accelerate(-0.3535533905);
-                        this.RotateTo(-0.5);
+                        this.accelerate(-0.3535533905);
+                        this.rotate(-0.5);
                         break;
                 }
             }
             if (keys[82]) {
-                this.Rescue();
+                this.rescue();
                 delete keys[82];
             }
         }

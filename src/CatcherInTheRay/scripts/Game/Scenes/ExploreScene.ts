@@ -9,6 +9,8 @@
             _character: string;
             _flatShader: BABYLON.ShaderMaterial;
 
+            collectibles: any;
+
             mainCamera: BABYLON.FollowCamera;
             followPlayer: boolean;
 
@@ -31,7 +33,6 @@
 
             private addLightsAndCamera(scene: BABYLON.Scene): void {
                  // Adding light
-                this._gameWorld._lights = [];
                 var light = new BABYLON.PointLight("sun", new BABYLON.Vector3(-1359, 260, -3040), scene);
                 light.intensity = 3;
                 light.diffuse.g = 0.7;
@@ -41,18 +42,14 @@
                 antiLight.intensity = .5;
                 antiLight.diffuse.g = 0.7;
                 antiLight.diffuse.b = 0.7;
-                this._gameWorld._lights.push(antiLight);
-
-                this._gameWorld._lights.push(light);
-
 
                 // Camera
                 var camera = new BABYLON.FreeCamera("Camera", new BABYLON.Vector3(0, 250, 0), scene);
                  camera.ellipsoid = new BABYLON.Vector3(8, 10, 8);
                 // camera.checkCollisions = true;
-                 if (this._gameWorld._camera) this._gameWorld._camera.dispose();
-                 this._gameWorld._camera = camera;
-                 camera.attachControl(this._gameWorld._canvas);
+                 if (this._gameWorld.camera) this._gameWorld.camera.dispose();
+                 this._gameWorld.camera = camera;
+                 camera.attachControl(this._gameWorld.canvas);
                  camera.maxZ = 10000;
                  camera.speed = 8;
                 //this.mainCamera = new BABYLON.FollowCamera("camera", new BABYLON.Vector3(0, 1000, 0), scene);
@@ -262,6 +259,7 @@
                     collectibles.forEach(e=> e.rotate(BABYLON.Axis.Z, 0.02, BABYLON.Space.LOCAL));
                 });
 
+                this.collectibles = collectibles;
                 return scene;
             }
 

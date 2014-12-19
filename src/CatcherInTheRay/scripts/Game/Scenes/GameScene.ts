@@ -10,40 +10,40 @@
         }
 
         export class GameScene extends SceneBuilder {
-            _randomSeed: number;
-            _debug: boolean;
-            _useFlatShading: boolean;
-            _mapParams: TERRAIN.TerrainGeneratorParams;
-            _character: string;
-            _flatShaderMat: BABYLON.ShaderMaterial;
-            _weirdShaderMat: BABYLON.ShaderMaterial;
+            private _randomSeed: number;
+            private _debug: boolean;
+            private _useFlatShading: boolean;
+            private _mapParams: TERRAIN.TerrainGeneratorParams;
+            private _character: string;
+            private _flatShaderMat: BABYLON.ShaderMaterial;
+            private _weirdShaderMat: BABYLON.ShaderMaterial;
+            private _followPlayer: boolean;
+            private _shadowGenerator: BABYLON.ShadowGenerator;
 
             mainCamera: BABYLON.FollowCamera;
-            followPlayer: boolean;
-
             startOrb: BABYLON.Mesh;
             endOrb: BABYLON.Mesh;
             mountains: BABYLON.Mesh;
-
+            collectibles: BABYLON.Mesh[] = [];
             player: GAME.Player;
             enemy: GAME.Player;
 
             constructor(gameWorld: GAME.GameWorld, parameters: GameParameters, mapParameters: TERRAIN.TerrainGeneratorParams) {
+                super(gameWorld);
+
                 this._debug = parameters.debug || false;
                 this._useFlatShading = parameters.useFlatShading || false;
                 this._character = parameters.character;
                 this._mapParams = mapParameters;
+                this._randomSeed = mapParameters.randomSeed;
 
-                this.followPlayer = true;
-
-                super(gameWorld);
+                this._followPlayer = true;
             }
 
             private addLightsAndCamera(): void {
                 var scene = this._scene;
 
                 // Adding light
-                this._gameWorld._lights = [];
                 var light = new BABYLON.PointLight("sun", new BABYLON.Vector3(-1359, 260, -3040), scene);
                 light.intensity = 3;
                 light.diffuse.g = 0.7;
@@ -53,9 +53,6 @@
                 antiLight.intensity = .5;
                 antiLight.diffuse.g = 0.7;
                 antiLight.diffuse.b = 0.7;
-                this._gameWorld._lights.push(antiLight);
-
-                this._gameWorld._lights.push(light);
 
                 this.mainCamera = new BABYLON.FollowCamera("camera", new BABYLON.Vector3(0, 1000, 0), scene);
                 this.mainCamera.maxZ = 10000;
@@ -117,12 +114,12 @@
                 }
 
                 // Set up miscellanius stuff
+                //mountainMesh.receiveShadows = true;
                 mountainMesh.checkCollisions = true;
                 mountainMesh.subdivide(Cast<BABYLON.GroundMesh>(mountainMesh).subdivisions);
                 mountainMesh.createOrUpdateSubmeshesOctree();
 
                 this.mountains = mountainMesh;
-                this.mountains.material.wireframe = false;
 
                 // Set up wrapper's mesh
                 var mountainSideMaterial = new BABYLON.StandardMaterial("mountainSideMaterial", scene);
@@ -141,12 +138,19 @@
                 this.startOrb = BABYLON.Mesh.CreateSphere("startOrb", 30, 30, scene, true);
                 this.startOrb.material = new BABYLON.StandardMaterial("startOrbMat", scene);
                 Cast<BABYLON.StandardMaterial>(this.startOrb.material).emissiveColor = new BABYLON.Color3(0.3, 1.0, 0.2);
-                this.endOrb = BABYLON.Mesh.CreateSphere("endOrb", 30, 30, scene, true);
-                this.endOrb.material = new BABYLON.StandardMaterial("endOrbMat", scene);
-                Cast<BABYLON.StandardMaterial>(this.endOrb.material).emissiveColor = new BABYLON.Color3(1.0, 0.2, 0.3);
-
                 this.startOrb.position = new BABYLON.Vector3(this._mapParams.pathTopOffset - this._mapParams.width / 2, 60, this._mapParams.height / 2 - 10);
-                this.endOrb.position = new BABYLON.Vector3(this._mapParams.pathBottomOffset - this._mapParams.width / 2, 20, this._mapParams.height / -2 + 10);
+
+                this.endOrb = BABYLON.Mesh.CreateSphere("endOrb", 30, 30, scene, true);
+                this.endOrb.position = new BABYLON.Vector3(this._mapParams.pathBottomOffset - this._mapParams.width / 2, 20, this._mapParams.height / -2 - 10);
+                this.endOrb.material = this._weirdShaderMat;
+                this.collectibles.push(this.endOrb);
+
+                scene.registerBeforeRender(() => {
+                    var time = (Date.now() / 6666 % 2 * Math.PI);
+                    this.endOrb.scaling.x = 1 + Math.sin(time) / 4;
+                    this.endOrb.scaling.y = 1 + Math.cos(time + 0.33) / 4;
+                    this.endOrb.scaling.z = 1 + Math.sin(time + 0.7) / 4;
+                });
             }
 
             public CreatePlayer(meshName: string): Player {
@@ -175,7 +179,7 @@
                     this.player.Initialize(playerMesh);
 
                     scene.registerBeforeRender(() => {
-                        if (this.followPlayer && !this.mainCamera.target) {
+                        if (this._followPlayer && !this.mainCamera.target) {
                             this.mainCamera.radius = 150; // how far from the object to follow
                             this.mainCamera.heightOffset = 30; // how high above the object to place the camera
                             this.mainCamera.rotationOffset = 0; // the viewing angle
@@ -215,11 +219,11 @@
                     parent.position.x += this._gameWorld.parameters.gameParameters.isHost ? -20 : 20;
 
                     this.enemy.Initialize(enemyMesh);
+
                 }, null, () => { console.error("Mesh loading error") });
 
                 return this.enemy;
             }
-
 
             private createShaders(): void {
                 var scene = this._scene;
@@ -256,9 +260,10 @@
                 this._weirdShaderMat = weirdShader;
             }
 
-            collectibles: BABYLON.Mesh[] = [];
-            public DropCollectibles(): void {
+            private dropCollectibles(): void {
+                console.log("Making collectibles with ", this._randomSeed);
                 var randomizer = new MersenneTwister(this._randomSeed);
+                var r = 0;
                 var testRay = new BABYLON.Ray(BABYLON.Vector3.Zero(), BABYLON.Axis.Y.scale(-1));
                 for (var i = 0; i < 50;) {
                     var x = (randomizer.Random() * this._mapParams.width - this._mapParams.width / 2) * 0.9;
@@ -266,16 +271,16 @@
                     testRay.origin.x = x;
                     testRay.origin.z = z;
                     var intersex = this.mountains.intersects(testRay, false);
-                    if (intersex.hit && intersex.pickedPoint.y < 25) {
+                    if (intersex.hit && intersex.pickedPoint.y < 15) {
                         switch (Math.floor(Math.random() * 3)) {
                             case 0:
-                                var collectible = BABYLON.Mesh.CreateSphere("Sphere" + i++, 20, 10, this._scene, false);
+                                var collectible = BABYLON.Mesh.CreateSphere("collectible" + i, 20, 10, this._scene, false);
                                 break;
                             case 1:
-                                collectible = BABYLON.Mesh.CreateTorus("Torus" + i++, 5, 2, 60, this._scene, false);
+                                collectible = BABYLON.Mesh.CreateTorus("collectible" + i, 5, 2, 60, this._scene, false);
                                 break;
                             case 2:
-                                collectible = BABYLON.Mesh.CreateTorusKnot("TorusKnot" + i++, 2, 1, 80, 30, 3, 4, this._scene, false);
+                                collectible = BABYLON.Mesh.CreateTorusKnot("collectible" + i, 2, 1, 80, 30, 3, 4, this._scene, false);
                                 break;
                         }
                         collectible.position = intersex.pickedPoint.clone();
@@ -285,6 +290,7 @@
                         collectible.rotate(axis, Math.random() * Math.PI, BABYLON.Space.LOCAL);
                         collectible.material = this._weirdShaderMat;
                         this.collectibles.push(collectible);
+                        i++;
                     }
                 }
                 this._scene.registerBeforeRender(() => {
@@ -306,7 +312,7 @@
 
                 this.CreatePlayer(this._character);
 
-                this.DropCollectibles();
+                this.dropCollectibles();
 
                 return scene;
             }

@@ -1,0 +1,48 @@
+﻿
+.a-fox {
+    width: 128px;
+    height: 128px;
+    background-image: url('/assets/Profiles/fox.jpg');
+}
+
+.a-deer {
+    width: 128px;
+    height: 128px;
+    background-image: url('/assets/Profiles/deer.jpg');
+}
+
+.a-mountainlion {
+    width: 128px;
+    height: 128px;
+    background-image: url('/assets/Profiles/mountainlion.jpg');
+}
+
+.a-moose {
+    width: 128px;
+    height: 128px;
+    background-image: url('/assets/Profiles/moose.jpg');
+}
+
+.a-wolf {
+    width: 128px;
+    height: 128px;
+    background-image: url('/assets/Profiles/wolf.jpg');
+}
+
+.a-chowchow {
+    width: 128px;
+    height: 128px;
+    background-image: url('/assets/Profiles/chowchow.jpg');
+}
+
+.a-goldenRetreiver {
+    width: 128px;
+    height: 128px;
+    background-image: url('/assets/Profiles/goldenRetreiver.jpg');
+}
+
+.a-elk {
+    width: 128px;
+    height: 128px;
+    background-image: url('/assets/Profiles/elk.jpg');
+}

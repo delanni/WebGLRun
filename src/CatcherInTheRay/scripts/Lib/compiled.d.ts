@@ -110,18 +110,20 @@ declare module GAME {
             useFlatShading?: boolean;
         }
         class GameScene extends SceneBuilder {
-            _randomSeed: number;
-            _debug: boolean;
-            _useFlatShading: boolean;
-            _mapParams: TERRAIN.TerrainGeneratorParams;
-            _character: string;
-            _flatShaderMat: BABYLON.ShaderMaterial;
-            _weirdShaderMat: BABYLON.ShaderMaterial;
+            private _randomSeed;
+            private _debug;
+            private _useFlatShading;
+            private _mapParams;
+            private _character;
+            private _flatShaderMat;
+            private _weirdShaderMat;
+            private _followPlayer;
+            private _shadowGenerator;
             mainCamera: BABYLON.FollowCamera;
-            followPlayer: boolean;
             startOrb: BABYLON.Mesh;
             endOrb: BABYLON.Mesh;
             mountains: BABYLON.Mesh;
+            collectibles: BABYLON.Mesh[];
             player: Player;
             enemy: Player;
             constructor(gameWorld: GameWorld, parameters: GameParameters, mapParameters: TERRAIN.TerrainGeneratorParams);
@@ -132,7 +134,7 @@ declare module GAME {
             CreatePlayer(meshName: string): Player;
             CreateEnemy(meshName: string): Player;
             private createShaders();
-            DropCollectibles(): void;
+            private dropCollectibles();
             BuildSceneAround(scene: BABYLON.Scene): BABYLON.Scene;
         }
     }
@@ -140,20 +142,17 @@ declare module GAME {
 declare module GAME {
     var ACCEPTED_KEYS: {};
     class GameWorld {
-        _engine: BABYLON.Engine;
-        _scene: BABYLON.Scene;
-        _camera: BABYLON.Camera;
-        _canvas: HTMLCanvasElement;
-        _gui: GUI;
-        _lights: BABYLON.Light[];
-        _socket: SocketIOClient.Socket;
-        _scenes: {
-            [x: string]: SCENES.SceneBuilder;
-        };
+        engine: BABYLON.Engine;
+        scene: BABYLON.Scene;
+        camera: BABYLON.Camera;
+        canvas: HTMLCanvasElement;
+        private _gui;
+        private _socket;
+        private _scenes;
+        private _lastPositionUpdate;
         player: Player;
         enemy: Player;
-        gameScene: SCENES.GameScene;
-        private random;
+        collectibles: BABYLON.Mesh[];
         parameters: GameProperties;
         constructor(canvasId: string, parameters: GameProperties, socket: SocketIOClient.Socket, fullify?: string);
         Load(properties: GameProperties): UTILS.Chainable<any>;
@@ -161,10 +160,9 @@ declare module GAME {
         private hookSocketTo(controller);
         private hookKeyboardTo(controller);
         private appendHandlers(socket);
-        _lastPositionUpdate: number;
         StartRenderLoop(): void;
-        Start(): void;
-        private countdown(timeoutms);
+        private start();
+        private stopGame(stopPlayer, stopEnemy);
         private applyParameters(guiParams);
         private buildScenes(parameters);
         private extendCanvas(fullify);
@@ -200,27 +198,33 @@ declare module GAME {
         ScalingVector: BABYLON.Vector3;
     }
     class Player {
-        INTERSECTION_TRESHOLD: number;
-        BASE_ACCELERATION: number;
-        BASE_JUMP_POW: number;
-        LAND_COOLDOWN: number;
-        ROTATION_APPROXIMATOR: number;
-        TIMEFACTOR: number;
-        MINVECTOR: BABYLON.Vector3;
-        MAXVECTOR: BABYLON.Vector3;
-        GRAVITY: BABYLON.Vector3;
+        private INTERSECTION_TRESHOLD;
+        private BASE_ACCELERATION;
+        private BASE_JUMP_POW;
+        private LAND_COOLDOWN;
+        private ROTATION_APPROXIMATOR;
+        private TIMEFACTOR;
+        private MINVECTOR;
+        private MAXVECTOR;
+        private GRAVITY;
+        private _animationObject;
+        private _scene;
+        private _bottomVector;
+        private _ray;
+        private _ground;
+        private _landTime;
+        private _lastRescueTime;
+        private _lastJumpTime;
+        private _lastUpdateTime;
+        private _latency;
+        private _lastFrameFactor;
+        private _totalFramesDuration;
+        private _totalFramesCount;
+        private _lastTickTime;
+        Controller: any;
+        CurrentRotation: number;
         mesh: BABYLON.Mesh;
         parent: BABYLON.Mesh;
-        _animationObject: BABYLON.Animation;
-        _scene: BABYLON.Scene;
-        _bottomVector: BABYLON.Vector3;
-        _ray: BABYLON.Ray;
-        _ground: BABYLON.Mesh;
-        Controller: any;
-        _landTime: number;
-        _lastRescueTime: number;
-        _lastJumpTime: number;
-        CurrentRotation: number;
         modelProperties: ICharacterModelDictionary;
         currentAnimation: BABYLON.Animatable;
         currentAnimationName: string;
@@ -229,22 +233,16 @@ declare module GAME {
         isOnGround: boolean;
         IsEnabled: boolean;
         targetPosition: BABYLON.Vector3;
-        SetEnabled(value: boolean): void;
         constructor(scene: BABYLON.Scene, ground: BABYLON.Mesh);
         Initialize(mesh: BABYLON.Mesh): void;
-        _lastUpdateTime: number;
-        _latency: number;
-        pushUpdate(positionData: any): void;
-        _lastFrameFactor: number;
-        _totalFramesDuration: number;
-        _totalFramesCount: number;
-        _lastTickTime: number;
-        private _gameLoop();
-        Jump(power: number): void;
-        Accelerate(force: number): void;
-        Rescue(): void;
-        RotateTo(rotationDirection: number): void;
-        EvaluateKeyState(keys: any): void;
+        PushUpdate(positionData: any): void;
+        setEnabled(value: boolean): void;
+        private gameLoop();
+        private jump(power);
+        private accelerate(force);
+        private rescue();
+        private rotate(rotationDirection);
+        private evaluateKeyState(keys);
         private startAnimation(animationKey, force?);
         private stopAnimation();
     }
@@ -266,6 +264,7 @@ declare module GAME {
             _mapParams: TERRAIN.TerrainGeneratorParams;
             _character: string;
             _flatShader: BABYLON.ShaderMaterial;
+            collectibles: any;
             mainCamera: BABYLON.FollowCamera;
             followPlayer: boolean;
             startOrb: BABYLON.Mesh;

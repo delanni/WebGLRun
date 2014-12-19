@@ -1,8 +1,9 @@
 {
-  "name": "ServerProject",
-  "version": "0.4.0",
-  "description": "ServerProject",
+  "name": "RavineRun",
+  "version": "1.0.0",
+  "description": "This is my thesis work",
   "main": "app.js",
+  "scripts": { "start": "node app.js" },
   "author": {
     "name": "Alex",
     "email": "delanni.alex@gmail.com"

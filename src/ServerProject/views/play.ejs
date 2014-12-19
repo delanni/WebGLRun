@@ -5,21 +5,42 @@
     <title>PEONHQ - WebGL Runner</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <link rel="stylesheet" href="/css/play.css" type="text/css" />
+    <link rel="stylesheet" href="/css/avatars.css" type="text/css" />
+
+    <script type="text/javascript" src="/scripts/Lib/angular.min.js"></script>
+    <script type="text/javascript" src="/scripts/Lib/jquery-2.1.1.min.js"></script>
+    <script type="text/javascript" src="/scripts/angularModules.js"></script>
 </head>
 
-<body>
+<body ng-app="playModule">
     <!-- A canvas for the engine, this will be resized if needed -->
-    <div id="countdownElement" class="hide">X</div>
-    <div id="doormat">
+    <div id="messagesContainer">
+        <div ng-repeat="msg in messages" class="message {{msg.klass}}">{{msg.text}}</div>
+    </div>
+    <div id="doormat" ng-controller="doormatController">
         <div class="playerContainer">
             <h3>Share this URL with a friend to play:</h3>
-            <h2 id="gameUrl"></h2>
-            <h3 id="player1" class="notReady">You: ........</h3>
-            <h3 id="player2" class="notReady">Opponent: ......</h3>
+            <h2 id="gameUrl">{{gameUrl}}</h2>
+            <h3 id="player1" class="{{player.isReady?'ready':'notReady'}}">You: {{player.name}}</h3>
+            <h3 id="player2" class="{{enemy.isReady?'ready':'notReady'}}">Opponent: {{enemy.name}}</h3>
         </div>
-        <button id="readyButton" data-is-ready="false" class="notReady">Ready!</button>
+        <button id="readyButton" ng-click="readyButtonClick()" class="{{player.isReady?'ready':'notReady'}}">{{readyButtonCaption}}</button>
     </div>
-    <div class="mainwrapper">
+    <div class="mainwrapper" ng-controller="pointsController">
+        <div id="player1Avatar" class="playerbox">
+            <div class="avatar a-{{player.character}}"></div>
+            <div>
+                <div class="playerName">{{player.name}}</div>
+                <div>{{player.points}} points</div>
+            </div>
+        </div>
+        <div id="player2Avatar" class="playerbox">
+            <div class="avatar a-{{enemy.character}}"></div>
+            <div>
+                <div class="playerName">{{enemy.name}}</div>
+                <div>{{enemy.points}} points</div>
+            </div>
+        </div>
         <canvas id="mainCanvas" width="600" height="800"></canvas>
     </div>
     <!-- Include all the third party stuff -->
@@ -27,7 +48,6 @@
     <script type="text/javascript" src="/scripts/Lib/socket.io-1.2.0.js"></script>
     <script type="text/javascript" src="/scripts/Lib/babylon.1.14-dbg.js"></script>
     <script type="text/javascript" src="/scripts/Lib/StackBlur.js"></script>
-    <script type="text/javascript" src="/scripts/Lib/oimo.js"></script>
 
     <!-- Penultimately the compilation result of my .TS files-->
     <script type="text/javascript" src="/scripts/Lib/compiled.js"></script>
@@ -40,65 +60,10 @@
 
             var myName = params.gameParameters.name;
 
-            document.getElementById("readyButton").onclick=function(){
-                var isReady = this.dataset['isReady'] == "false";
-                this.dataset['isReady'] = isReady;
-                this.classList.remove("notReady");
-                this.classList.remove("ready");
-                if (isReady){
-                    this.classList.add("ready");
-                    this.textContent = "Wait, not ready";
-                } else {
-                    this.classList.add("notReady");
-                    this.textContent = "Ready";
-                }
-                socket.emit("readyStateChanged", {isReady:isReady, name: myName, timestamp:Date.now()});
-            }
-
-            socket.on("startGame",function(){
-                document.getElementById("doormat").classList.add("hide");
-                document.getElementById("countdownElement").classList.remove("hide");
-            });
-
-            socket.on("readyStateChanged",function(info){
-                var r = info.isReady;
-                if (document.getElementById("player1").dataset.name == info.name){
-                    document.getElementById("player1").classList.remove(r?"notReady":"ready");
-                    document.getElementById("player1").classList.add(r?"ready":"notReady");
-                } else if (document.getElementById("player2").dataset.name == info.name) {
-                    document.getElementById("player2").classList.remove(r?"notReady":"ready");
-                    document.getElementById("player2").classList.add(r?"ready":"notReady");
-                }
-            });
-
-            window.onmessage = function(evt){
-                if (evt.data.timeoutms){
-                    var data= evt.data.timeoutms;
-                    document.getElementById("countdownElement")
-                        .textContent="Starting in "+(data/1000)+"s!";
-                    if (data<1000){
-                        document.getElementById("countdownElement").textContent="GO!";
-                        document.getElementById("countdownElement").classList.add("hide");
-                        setTimeout(function(){
-                            document.getElementById("countdownElement").style.display="none";
-                        },1000);
-                    }
-                } else if (evt.data.playerInfo){
-                    var playerInfo = evt.data.playerInfo;
-                    if (playerInfo.playerType == "player"){
-                        document.getElementById("player1").textContent = "You: " + playerInfo.name;
-                        document.getElementById("player1").dataset.name = playerInfo.name;
-                    } else {
-                        document.getElementById("player2").textContent = "Opponent: " + playerInfo.name;
-                        document.getElementById("player2").dataset.name = playerInfo.name;
-                    }
-                }
-            }
-
-            game.Load(params);
-
-            document.getElementById("gameUrl").textContent = window.location.href;
-
+            // allow to load angular modules before starting
+            setTimeout(function(){
+                game.Load(params);
+            },0);
         })(<%- JSON.stringify({mapParameters:mapParams,gameParameters:gameParams}) %>);
     </script>
 </body>

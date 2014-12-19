@@ -1,6 +1,6 @@
-﻿var rr = angular.module("rr", []);
+﻿var indexModule = angular.module("indexModule", []);
 
-rr.controller("loginController", function ($scope,$location) {
+indexModule.controller("loginController", function ($scope, $location) {
     $scope.characters = [{
         characterId: "fox",
         name: "Foxy Dee",
@@ -27,7 +27,7 @@ rr.controller("loginController", function ($scope,$location) {
         description: "She was born of the best breed of Golden Retreivers, yet, she was born with one eye. Although no one pays attention to her lisp when she has only one eye, which is nice."
     }, {
         characterId: "wolf",
-        name: "Ray Wolfian Jorma",
+        name: "Nat Wolfi",
         description: "In love with Foxy, but she just plays games with him. No, not video games, and not even mobile games. Real life games - relationship wise."
     }, {
         characterId: "chowchow",
@@ -78,6 +78,141 @@ rr.controller("loginController", function ($scope,$location) {
             form.submit();
         });
     }
+});
 
 
+var playModule = angular.module("playModule", []);
+
+playModule.run(function ($rootScope) {
+    $rootScope.socket = window.socket;
+    $rootScope.game = window.game;
+
+    $rootScope.messages = [];
+
+    $rootScope.playerName = $rootScope.game.parameters.gameParameters.name;
+    $rootScope.character = $rootScope.game.parameters.gameParameters.character;
+    $rootScope.player = {
+        points: 0
+    };
+    $rootScope.enemy = {
+        points: 0
+    };
+
+    $rootScope.socket.on("readyStateChanged", function (info) {
+        var r = info.isReady;
+        var n = info.name;
+        var c = $rootScope.playerName == n ? $rootScope.player : $rootScope.enemy;
+        c.isReady = r;
+
+        $rootScope.$apply();
+    });
+
+    $rootScope.socket.on("startGame", function (x) {
+        var timeout = x.timeout;
+        var startTime = Date.now() + timeout;
+
+        $("#doormat").addClass("hide");
+        setTimeout(function () { $("#doormat").css("display", "none"); }, 1000);
+
+        var countdownMessage = {
+            klass: "show",
+            text: "Starting in " + Math.floor(timeout / 1000) + "s!"
+        }
+        $rootScope.messages.push(countdownMessage);
+        $rootScope.$apply();
+
+        var interval = setInterval(function () {
+            countdownMessage.text = "Starting in " + Math.round((startTime - Date.now()) / 1000) + "s!";
+            $rootScope.$apply();
+        }, 1000);
+
+        setTimeout(function () {
+            clearInterval(interval);
+            countdownMessage.text = "GO!";
+            countdownMessage.klass = "hide";
+            $rootScope.$apply();
+            setTimeout(function () {
+                $rootScope.messages.splice($rootScope.messages.indexOf(countdownMessage), 1);
+                $rootScope.$apply();
+            }, 1000);
+        }, timeout - 200);
+    });
+
+    $rootScope.socket.on("gameOver", function (gameOverInfo) {
+        $rootScope.messages.length = 0;
+        var gameOverMessage = {
+            text: "Game Over",
+            klass: "show"
+        };
+        var winnerMessage = {
+            text: "You " + (gameOverInfo.winner == $rootScope.playerName ? "win!" : "lose..."),
+            klass: (gameOverInfo.winner == $rootScope.playerName) ? "ready" : "notReady"
+        };
+        $rootScope.messages.push(gameOverMessage);
+        $rootScope.messages.push(winnerMessage);
+        $rootScope.$apply();
+    });
+
+    window.onmessage = function (evt) {
+        if (evt.data.playerInfo) {
+            var playerInfo = evt.data.playerInfo;
+            if (playerInfo.playerType == "player") {
+                $rootScope.player.name = playerInfo.name;
+                $rootScope.player.character = playerInfo.character;
+            } else {
+                $rootScope.enemy.name = playerInfo.name;
+                $rootScope.enemy.character = playerInfo.character;
+            }
+            $rootScope.$apply();
+        } else if (evt.data.playerDied) {
+            var deathMessage = {
+                text: "You died",
+                klass: "notReady"
+            };
+            var waitMessage = {
+                text: "Waiting for opponent...",
+                klass: "show"
+            };
+            $rootScope.messages.length = 0;
+            $rootScope.messages.push(deathMessage, waitMessage);
+            $rootScope.$apply();
+        }
+    }
+
+    //delete window.socket;
+    //delete window.game;
+});
+
+playModule.controller("doormatController", function ($rootScope, $scope) {
+
+    $scope.readyButtonCaption = "I'm ready!";
+
+    $scope.readyButtonClick = function () {
+        if ($scope.readyButtonCaption == "I'm ready!") {
+            $scope.readyButtonCaption = "Wait, not ready!";
+            $rootScope.socket.emit("readyStateChanged", {
+                isReady: true,
+                name: $rootScope.playerName,
+                timestamp: Date.now()
+            });
+        } else {
+            $scope.readyButtonCaption = "I'm ready!";
+            $rootScope.socket.emit("readyStateChanged", {
+                isReady: false,
+                name: $rootScope.playerName,
+                timestamp: Date.now()
+            });
+        }
+    };
+
+    $scope.gameUrl = window.location.href;
+
+});
+
+playModule.controller("pointsController", function ($rootScope, $scope) {
+    $rootScope.socket.on("pointUpdate", function (x) {
+        var c = (x.name == $rootScope.player.name) ? $rootScope.player : $rootScope.enemy;
+        c.points = x.points;
+        $rootScope.$apply();
+    });
 });

@@ -39,6 +39,7 @@
     <Content Include="assets\Skybox\skyrender0005.png" />
     <Content Include="assets\Skybox\skyrender0006.png" />
     <Content Include="assets\sources.txt" />
+    <Content Include="css\avatars.css" />
     <Content Include="css\index.css" />
     <Content Include="css\play.css" />
     <Content Include="index.html" />
@@ -114,10 +115,10 @@
     <TypeScriptCompile Include="scripts\BabylonExtensions.ts" />
     <TypeScriptCompile Include="scripts\declarations\babylon.d.ts" />
     <TypeScriptCompile Include="scripts\declarations\socket.io-client.d.ts" />
-    <TypeScriptCompile Include="scripts\Filters\BlurFilter.ts" />
-    <TypeScriptCompile Include="scripts\Filters\CompositeFilters.ts" />
+    <TypeScriptCompile Include="scripts\Terrain\Filters\BlurFilter.ts" />
+    <TypeScriptCompile Include="scripts\Terrain\Filters\CompositeFilters.ts" />
     <TypeScriptCompile Include="scripts\declarations\StackBlur.d.ts" />
-    <TypeScriptCompile Include="scripts\Filters\FILTERS.ts" />
+    <TypeScriptCompile Include="scripts\Terrain\Filters\FILTERS.ts" />
     <TypeScriptCompile Include="scripts\Game\CharacterProperties.ts" />
     <TypeScriptCompile Include="scripts\Game\GAME.ts" />
     <TypeScriptCompile Include="scripts\Game\Player.ts" />
@@ -127,8 +128,8 @@
     <TypeScriptCompile Include="scripts\Game\Scenes\GameScene.ts" />
     <TypeScriptCompile Include="scripts\Game\GameWorld.ts" />
     <TypeScriptCompile Include="scripts\Gui.ts" />
-    <TypeScriptCompile Include="scripts\Filters\HistogramEqFilter.ts" />
-    <TypeScriptCompile Include="scripts\Filters\ICanvasFilter.ts" />
+    <TypeScriptCompile Include="scripts\Terrain\Filters\HistogramEqFilter.ts" />
+    <TypeScriptCompile Include="scripts\Terrain\Filters\ICanvasFilter.ts" />
     <TypeScriptCompile Include="scripts\Game\Scenes\SceneBuilder.ts" />
     <TypeScriptCompile Include="scripts\Terrain\HeightMapGenerator.ts" />
     <TypeScriptCompile Include="scripts\HTMLTools.ts" />

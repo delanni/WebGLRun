@@ -4540,9 +4540,6 @@ var BABYLON;
         } else if ('onwebkittransitionend' in window) {
             // Chrome/Saf (+ Mobile Saf)/Android
             transition = 'webkitTransitionEnd';
-        } else if ('onotransitionend' in myDiv || navigator.appName == 'Opera') {
-            // Opera
-            transition = 'oTransitionEnd';
         } else {
             // IE ?
             transition = 'transitionend';

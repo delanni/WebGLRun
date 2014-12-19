@@ -43,7 +43,7 @@
             JUMP: {
                 start: 7, end: 11, speed: 14, repeat: false
             },
-            ScalingVector: BABYLON.Vector3.FromArray([0.11, 0.11, 0.11])
+            ScalingVector: BABYLON.Vector3.FromArray([0.09, 0.09, 0.09])
         },
         "deer": {
             RUN: {
@@ -103,7 +103,7 @@
             JUMP: {
                 start: 5, end: 10, speed: 14, repeat: false
             },
-            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
+            ScalingVector: BABYLON.Vector3.FromArray([0.17, 0.17, 0.17])
         },
         "goldenRetreiver": {
             RUN: {

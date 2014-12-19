@@ -4,22 +4,20 @@ module GAME {
     export var ACCEPTED_KEYS: {} = { "32": 32, "87": 87, "68": 68, "83": 83, "65": 65, "82": 82 };
 
     export class GameWorld {
-        _engine: BABYLON.Engine;
-        _scene: BABYLON.Scene;
-        _camera: BABYLON.Camera;
-        _canvas: HTMLCanvasElement;
-        _gui: GUI;
-        _lights: BABYLON.Light[];
-        _socket: SocketIOClient.Socket;
-        _scenes: { [name: string]: SCENES.SceneBuilder } = {};
+        private _gui: GUI;
+        private _socket: SocketIOClient.Socket;
+        private _scenes: { [name: string]: SCENES.SceneBuilder } = {};
+        private _lastPositionUpdate: number = 0;
 
+        engine: BABYLON.Engine;
+        scene: BABYLON.Scene;
+        camera: BABYLON.Camera;
+        canvas: HTMLCanvasElement;
         player: Player;
         enemy: Player;
-
-        gameScene: GAME.SCENES.GameScene;
+        collectibles: BABYLON.Mesh[];
 
         /// DEFAULTS ARE HERE ///
-        private random = new MersenneTwister(111);
 
         parameters: GameProperties = {
             sceneId: GAME.Scenes.GAME,
@@ -50,8 +48,8 @@ module GAME {
             BABYLON.Engine.ShadersRepository = "/scripts/Shaders/";
 
             this._socket = socket;
-            this._canvas = Cast<HTMLCanvasElement>(document.getElementById(canvasId));
-            this._engine = new BABYLON.Engine(this._canvas);
+            this.canvas = Cast<HTMLCanvasElement>(document.getElementById(canvasId));
+            this.engine = new BABYLON.Engine(this.canvas);
 
             if (fullify) {
                 this.extendCanvas(FullifyStates.HARD);
@@ -71,7 +69,7 @@ module GAME {
         public Load(properties: GameProperties): UTILS.Chainable<any> {
             var deferred = new UTILS.Chainable();
             properties = UTILS.Mixin(properties, this.parameters, false);
-            this._engine.displayLoadingUI("Generating map, please wait...").then(() => {
+            this.engine.displayLoadingUI("Generating map, please wait...").then(() => {
                 this.applyParameters(properties);
                 this.loadScene(properties.sceneId);
                 if (this.parameters.gameParameters.isHost) {
@@ -82,7 +80,7 @@ module GAME {
                     this.emit("mapLoaded", { timestamp: Date.now() });
                 }
 
-                this._engine.hideLoadingUI().then(() => {
+                this.engine.hideLoadingUI().then(() => {
                     deferred.call();
                 });
 
@@ -90,10 +88,13 @@ module GAME {
                     var gameScene = Cast<SCENES.GameScene>(this._scenes["GAME"]);
                     this.hookKeyboardTo(gameScene.player.Controller);
                     this.player = gameScene.player;
+                    this.collectibles = gameScene.collectibles;
                 } else if (properties.sceneId == Scenes.EXPLORE) {
                     var exploreScene = Cast<SCENES.ExploreScene>(this._scenes["EXPLORE"]);
                     this.hookKeyboardTo(exploreScene.player.Controller);
                     this.player = exploreScene.player;
+                    this.collectibles = exploreScene.collectibles;
+                    this.player.setEnabled(true);
                 }
             });
             return deferred;
@@ -150,7 +151,11 @@ module GAME {
                 });
                 // this is info about me
                 window.postMessage({
-                    playerInfo: { name: this.parameters.gameParameters.name , playerType:"player"}
+                    playerInfo: {
+                        name: this.parameters.gameParameters.name,
+                        playerType: "player",
+                        character: this.parameters.gameParameters.character
+                    }
                 }, window.location.href);
             });
 
@@ -162,12 +167,16 @@ module GAME {
 
                 // this is info about the enemigo
                 window.postMessage({
-                    playerInfo: { name: playerInfo.name, playerType: "enemy" }
+                    playerInfo: {
+                        name: playerInfo.name,
+                        playerType: "enemy",
+                        character: playerInfo.character
+                    }
                 }, window.location.href);
             });
 
             socket.on("enemyPositionUpdate", positionInfo=> {
-                this.enemy.pushUpdate(positionInfo);
+                this.enemy.PushUpdate(positionInfo);
             });
 
             socket.on("ping", x=> {
@@ -175,25 +184,80 @@ module GAME {
             });
 
             socket.on("pong", x=> {
-                console.log("pong", Date.now()-x);
+                console.log("pong", Date.now() - x);
             });
 
             socket.on("startGame", x=> {
                 var timeout = x.timeout;
                 setTimeout(() => {
-                    this.Start();
+                    this.start();
                 }, timeout);
-                setTimeout(() => {
-                    this.countdown(timeout);
-                }, 0);
                 this.StartRenderLoop();
             });
+
+            socket.on("collectibleCollected", x=> {
+                var c = Cast<BABYLON.Mesh>(this.scene.getMeshByName(x.collectibleName));
+                if (!c) return;
+                else {
+                    this.scene.meshes.splice(this.scene.meshes.indexOf(c), 1);
+                    this.collectibles.splice(this.collectibles.indexOf(c), 1);
+                    c.isVisible = false;
+                }
+            });
+
+            socket.on("gameOver", x=> {
+                this.stopGame(true,true);
+            });
+
+            socket.on("playerDied", x=> {
+                if (this.parameters.gameParameters.name == x.playerName) {
+                    this.player.setEnabled(false);
+                } else {
+                    this.enemy.setEnabled(false);
+                }
+            });
         }
-        _lastPositionUpdate: number = 0;
 
         public StartRenderLoop() {
-            this._scene.registerBeforeRender(() => {
-                if (!this.player || !this._socket) return;
+            this.scene.registerBeforeRender(() => {
+                if (!this.player) return;
+
+                // handle player death
+                if (this.player.IsEnabled && this.player.parent.position.y < -50) {
+
+                    this.emit("playerDied", { playerName: this.parameters.gameParameters.name, timestamp : Date.now() });
+
+                    // if enemy still plays, put cam to him
+                    var gameScene = Cast<SCENES.GameScene>(this._scenes["GAME"]);
+                    if (gameScene.enemy.IsEnabled) {
+                        this.stopGame(true, false);
+                        window.postMessage({
+                            playerDied: true
+                        }, window.location.href);
+
+                        gameScene.mainCamera.target = gameScene.enemy.parent;
+                    } else {
+                        // else the server should shut us down
+                        this.stopGame(true, true);
+                    }
+                }
+
+                // Main game logic about collectibles
+                for (var i = 0; i < this.collectibles.length; i++) {
+                    var c = this.collectibles[i];
+                    var distance = this.player.parent.position.subtract(c.position).length();
+                    if (distance < 7) {
+                        this.scene.meshes.splice(this.scene.meshes.indexOf(c), 1);
+                        this.collectibles.splice(i--, 1);
+                        c.isVisible = false;
+                        this.emit("collectibleCollected", { collectibleName: c.name, timestamp: Date.now() });
+                    } else if (distance < 15) {
+                        c.position = BABYLON.Vector3.Lerp(c.position, this.player.parent.position, 0.5);
+                    }
+                }
+
+                // Communicating positions and such
+                if (!this._socket) return;
                 var now = Date.now();
                 if (now - this._lastPositionUpdate > 1000) {
                     this._lastPositionUpdate = now;
@@ -209,22 +273,16 @@ module GAME {
             BABYLON.Tools.QueueNewFrame(() => this.renderLoop());
         }
 
-        public Start() {
+        private start() {
             console.info("Started!");
-            this.player && this.player.SetEnabled(true);
-            this.enemy && this.enemy.SetEnabled(true);
+            this.player && this.player.setEnabled(true);
+            this.enemy && this.enemy.setEnabled(true);
         }
 
-        private countdown(timeoutms: number) {
-            console.info("Game starts in " + timeoutms / 1000 + "!");
-            window.postMessage({
-                timeoutms: timeoutms
-            }, window.location.href);
-            if (timeoutms >= 0) {
-                setTimeout(() => {
-                    this.countdown(timeoutms - 1000);
-                }, 1000);
-            }
+        private stopGame(stopPlayer,stopEnemy) {
+            console.info("Game over!");
+            this.player && this.player.setEnabled(!stopPlayer);
+            this.enemy && this.enemy.setEnabled(!stopEnemy);
         }
 
         private applyParameters(guiParams: GameProperties) {
@@ -258,17 +316,17 @@ module GAME {
         }
 
         private extendCanvas(fullify: FullifyStates) {
-            var parent = this._canvas.parentElement;
+            var parent = this.canvas.parentElement;
             if (fullify == FullifyStates.NO) return;
 
             var resize = () => {
                 if (fullify === FullifyStates.HARD) {
-                    this._canvas.width = this._canvas.parentElement.clientWidth;
-                    this._canvas.height = this._canvas.parentElement.clientHeight;
-                    this._engine.resize();
+                    this.canvas.width = this.canvas.parentElement.clientWidth;
+                    this.canvas.height = this.canvas.parentElement.clientHeight;
+                    this.engine.resize();
                 } else {
-                    this._canvas.style["width"] = "100%";
-                    this._canvas.style["height"] = "100%";
+                    this.canvas.style["width"] = "100%";
+                    this.canvas.style["height"] = "100%";
                 }
             };
 
@@ -277,11 +335,11 @@ module GAME {
         }
 
         private renderLoop() {
-            this._engine.beginFrame();
-            if (this._scene) {
-                this._scene.render();
+            this.engine.beginFrame();
+            if (this.scene) {
+                this.scene.render();
             }
-            this._engine.endFrame();
+            this.engine.endFrame();
             BABYLON.Tools.QueueNewFrame(() => this.renderLoop());
         }
 
@@ -291,25 +349,25 @@ module GAME {
                 debugItems[i].parentNode.removeChild(debugItems[i]);
             }
 
-            if (this._scene) {
-                this._scene.dispose();
+            if (this.scene) {
+                this.scene.dispose();
             }
 
             switch (s) {
                 case Scenes.TEST:
-                    this._scene = this._scenes["TEST"].BuildScene();
+                    this.scene = this._scenes["TEST"].BuildScene();
                     break;
                 case Scenes.GAME:
-                    this._scene = this._scenes["GAME"].BuildScene();
+                    this.scene = this._scenes["GAME"].BuildScene();
                     break;
                 case Scenes.ANIMAL:
-                    this._scene = this._scenes["ANIMAL"].BuildScene();
+                    this.scene = this._scenes["ANIMAL"].BuildScene();
                     break;
                 case Scenes.TERRAINGEN:
-                    this._scene = this._scenes["TERRAINGEN"].BuildScene();
+                    this.scene = this._scenes["TERRAINGEN"].BuildScene();
                     break;
                 case Scenes.EXPLORE:
-                    this._scene = this._scenes["EXPLORE"].BuildScene();
+                    this.scene = this._scenes["EXPLORE"].BuildScene();
                     break;
             }
         }

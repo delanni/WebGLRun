@@ -9,7 +9,7 @@
             }
 
             public BuildScene(): BABYLON.Scene {
-                this._scene = new BABYLON.Scene(this._gameWorld._engine);
+                this._scene = new BABYLON.Scene(this._gameWorld.engine);
                 return this.BuildSceneAround(this._scene);
             }
 

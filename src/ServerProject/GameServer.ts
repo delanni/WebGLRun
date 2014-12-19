@@ -42,7 +42,13 @@ export module GS {
     export class Player implements IPlayerInfo{
         _socket: SocketIO.Socket;
         _enemyRef: Player;
+
         isReady: boolean;
+        isDead: boolean;
+
+        collectibles: string[];
+        points: number = 0;
+
         mapReady: boolean;
         name: string;
         character: string;
@@ -53,15 +59,18 @@ export module GS {
             this._socket = socket;
             this.isReady = false;
             this.mapReady = false;
+            this.isDead = false;
             this.name = playerInfo.name;
             this.character = playerInfo.character;
             this.pos = [];
+            this.collectibles = [];
         }
 
         public getPlayerInfo():IPlayerInfo {
             return {
                 character: this.character,
-                name: this.name
+                name: this.name,
+                points: this.points
             }
         }
 
@@ -220,6 +229,37 @@ export module GS {
                         var latency = Date.now() - x;
                         player.latency = latency;
                     });
+
+                    socket.on("collectibleCollected", x=> {
+
+                        player.collectibles.push(x.name);
+                        player.points += (x.collectibleName == "endOrb")?5:1;
+
+                        nsp.emit("pointUpdate", {
+                            name: player.name,
+                            points: player.points
+                        });
+
+                        player._enemyRef._socket.emit("collectibleCollected", x);
+
+                        if (x.collectibleName == "endOrb") {
+                            fireGameOver();
+                        }
+                    });
+
+                    socket.on("playerDied", x=> {
+                        if (player._enemyRef.isDead) {
+                            fireGameOver();
+                        } else {
+                            nsp.emit("playerDied", x);
+                            player.isDead = true;
+                        }
+                    });
+
+                    var fireGameOver = function () {
+                        var winner = room.players.sort((a, b) => b.points - a.points)[0].name;
+                        nsp.emit("gameOver", { winner: winner });
+                    };
 
                     var intervalId = setInterval(() => {
                         socket.emit("ping", Date.now());

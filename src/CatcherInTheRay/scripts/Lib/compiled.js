@@ -325,7 +325,7 @@ var GAME;
                 speed: 14,
                 repeat: false
             },
-            ScalingVector: BABYLON.Vector3.FromArray([0.11, 0.11, 0.11])
+            ScalingVector: BABYLON.Vector3.FromArray([0.09, 0.09, 0.09])
         },
         "deer": {
             RUN: {
@@ -433,7 +433,7 @@ var GAME;
                 speed: 14,
                 repeat: false
             },
-            ScalingVector: BABYLON.Vector3.FromArray([0.25, 0.25, 0.25])
+            ScalingVector: BABYLON.Vector3.FromArray([0.17, 0.17, 0.17])
         },
         "goldenRetreiver": {
             RUN: {
@@ -473,7 +473,7 @@ var GAME;
                 this._gameWorld = gameWorld;
             }
             SceneBuilder.prototype.BuildScene = function () {
-                this._scene = new BABYLON.Scene(this._gameWorld._engine);
+                this._scene = new BABYLON.Scene(this._gameWorld.engine);
                 return this.BuildSceneAround(this._scene);
             };
             SceneBuilder.prototype.BuildSceneAround = function (scene) {
@@ -504,15 +504,36 @@ var GAME;
             }
             TestScene.prototype.BuildSceneAround = function (scene) {
                 var torusKnot;
-                var light = new BABYLON.PointLight("light1", new BABYLON.Vector3(0, 10, 0), scene);
+                var model;
+                var light = new BABYLON.DirectionalLight("light1", new BABYLON.Vector3(0, -1, -0.5), scene);
+                light.position = new BABYLON.Vector3(0, 70, 0);
+                var shadowGen = new BABYLON.ShadowGenerator(1024, light);
                 var camera = new BABYLON.ArcRotateCamera("Camera", 10, 20, 30, new BABYLON.Vector3(0, 0, 0), scene);
-                camera.attachControl(this._gameWorld._canvas);
+                camera.attachControl(this._gameWorld.canvas);
                 torusKnot = BABYLON.Mesh.CreateTorusKnot("torusknot", 3, 2, 80, 30, 4, 4, scene, true);
+                torusKnot.position.x += 10;
+                torusKnot.position.z += 10;
+                shadowGen.getShadowMap().renderList.push(torusKnot);
+                BABYLON.SceneLoader.ImportMesh(["fox"], "/models/", "fox.babylon", scene, function (m) {
+                    model = Cast(m[0]);
+                    model.material = weirdShaderMat;
+                    model.position.addInPlace(new BABYLON.Vector3(-20, 0, -20));
+                    shadowGen.getShadowMap().renderList.push(model);
+                });
                 var weirdShaderMat = new BABYLON.ShaderMaterial("weirdShader", scene, "weird", {
                     attributes: ["position", "normal"],
                     uniforms: ["world", "worldView", "worldViewProjection", "view", "projection"]
                 });
                 torusKnot.material = weirdShaderMat;
+                var plane = BABYLON.Mesh.CreatePlane("plane", 100, scene, false);
+                plane.position = new BABYLON.Vector3(0, -20, 0);
+                plane.rotate(BABYLON.Axis.X, Math.PI / 2, 0 /* LOCAL */);
+                plane.receiveShadows = true;
+                var planeMaterial = new BABYLON.StandardMaterial("standi", scene);
+                planeMaterial.specularColor = BABYLON.Color3.Yellow();
+                planeMaterial.specularPower = 0;
+                planeMaterial.diffuseColor = BABYLON.Color3.Blue();
+                plane.material = planeMaterial;
                 scene.registerBeforeRender(function () {
                     torusKnot.rotate(BABYLON.Vector3.Up(), 0.01, 0 /* LOCAL */);
                     weirdShaderMat.setFloat("time", (Date.now() / 1000) % (Math.PI * 2));
@@ -531,16 +552,17 @@ var GAME;
         var GameScene = (function (_super) {
             __extends(GameScene, _super);
             function GameScene(gameWorld, parameters, mapParameters) {
+                _super.call(this, gameWorld);
+                this.collectibles = [];
                 this._debug = parameters.debug || false;
                 this._useFlatShading = parameters.useFlatShading || false;
                 this._character = parameters.character;
                 this._mapParams = mapParameters;
-                this.followPlayer = true;
-                _super.call(this, gameWorld);
+                this._randomSeed = mapParameters.randomSeed;
+                this._followPlayer = true;
             }
             GameScene.prototype.addLightsAndCamera = function () {
                 var scene = this._scene;
-                this._gameWorld._lights = [];
                 var light = new BABYLON.PointLight("sun", new BABYLON.Vector3(-1359, 260, -3040), scene);
                 light.intensity = 3;
                 light.diffuse.g = 0.7;
@@ -549,8 +571,6 @@ var GAME;
                 antiLight.intensity = .5;
                 antiLight.diffuse.g = 0.7;
                 antiLight.diffuse.b = 0.7;
-                this._gameWorld._lights.push(antiLight);
-                this._gameWorld._lights.push(light);
                 this.mainCamera = new BABYLON.FollowCamera("camera", new BABYLON.Vector3(0, 1000, 0), scene);
                 this.mainCamera.maxZ = 10000;
                 this.mainCamera.speed = 8;
@@ -596,7 +616,6 @@ var GAME;
                 mountainMesh.subdivide(Cast(mountainMesh).subdivisions);
                 mountainMesh.createOrUpdateSubmeshesOctree();
                 this.mountains = mountainMesh;
-                this.mountains.material.wireframe = false;
                 var mountainSideMaterial = new BABYLON.StandardMaterial("mountainSideMaterial", scene);
                 wrappingMesh.material = mountainSideMaterial;
                 mountainSideMaterial.specularPower = 0;
@@ -605,15 +624,22 @@ var GAME;
                 mountainSideMaterial.bumpTexture = new BABYLON.Texture("/assets/noisenormals.jpg", scene);
             };
             GameScene.prototype.putStartAndEnd = function () {
+                var _this = this;
                 var scene = this._scene;
                 this.startOrb = BABYLON.Mesh.CreateSphere("startOrb", 30, 30, scene, true);
                 this.startOrb.material = new BABYLON.StandardMaterial("startOrbMat", scene);
                 Cast(this.startOrb.material).emissiveColor = new BABYLON.Color3(0.3, 1.0, 0.2);
-                this.endOrb = BABYLON.Mesh.CreateSphere("endOrb", 30, 30, scene, true);
-                this.endOrb.material = new BABYLON.StandardMaterial("endOrbMat", scene);
-                Cast(this.endOrb.material).emissiveColor = new BABYLON.Color3(1.0, 0.2, 0.3);
                 this.startOrb.position = new BABYLON.Vector3(this._mapParams.pathTopOffset - this._mapParams.width / 2, 60, this._mapParams.height / 2 - 10);
-                this.endOrb.position = new BABYLON.Vector3(this._mapParams.pathBottomOffset - this._mapParams.width / 2, 20, this._mapParams.height / -2 + 10);
+                this.endOrb = BABYLON.Mesh.CreateSphere("endOrb", 30, 30, scene, true);
+                this.endOrb.position = new BABYLON.Vector3(this._mapParams.pathBottomOffset - this._mapParams.width / 2, 20, this._mapParams.height / -2 - 10);
+                this.endOrb.material = this._weirdShaderMat;
+                this.collectibles.push(this.endOrb);
+                scene.registerBeforeRender(function () {
+                    var time = (Date.now() / 6666 % 2 * Math.PI);
+                    _this.endOrb.scaling.x = 1 + Math.sin(time) / 4;
+                    _this.endOrb.scaling.y = 1 + Math.cos(time + 0.33) / 4;
+                    _this.endOrb.scaling.z = 1 + Math.sin(time + 0.7) / 4;
+                });
             };
             GameScene.prototype.CreatePlayer = function (meshName) {
                 var _this = this;
@@ -637,7 +663,7 @@ var GAME;
                     cameraFollowTarget.position = parent.position.clone();
                     _this.player.Initialize(playerMesh);
                     scene.registerBeforeRender(function () {
-                        if (_this.followPlayer && !_this.mainCamera.target) {
+                        if (_this._followPlayer && !_this.mainCamera.target) {
                             _this.mainCamera.radius = 150;
                             _this.mainCamera.heightOffset = 30;
                             _this.mainCamera.rotationOffset = 0;
@@ -706,10 +732,43 @@ var GAME;
                 });
                 this._weirdShaderMat = weirdShader;
             };
-            GameScene.prototype.DropCollectibles = function () {
+            GameScene.prototype.dropCollectibles = function () {
+                var _this = this;
+                console.log("Making collectibles with ", this._randomSeed);
                 var randomizer = new MersenneTwister(this._randomSeed);
-                for (var i = 0; i < 50; i++) {
+                var r = 0;
+                var testRay = new BABYLON.Ray(BABYLON.Vector3.Zero(), BABYLON.Axis.Y.scale(-1));
+                for (var i = 0; i < 50;) {
+                    var x = (randomizer.Random() * this._mapParams.width - this._mapParams.width / 2) * 0.9;
+                    var z = (randomizer.Random() * this._mapParams.height - this._mapParams.height / 2) * 0.9;
+                    testRay.origin.x = x;
+                    testRay.origin.z = z;
+                    var intersex = this.mountains.intersects(testRay, false);
+                    if (intersex.hit && intersex.pickedPoint.y < 15) {
+                        switch (Math.floor(Math.random() * 3)) {
+                            case 0:
+                                var collectible = BABYLON.Mesh.CreateSphere("collectible" + i, 20, 10, this._scene, false);
+                                break;
+                            case 1:
+                                collectible = BABYLON.Mesh.CreateTorus("collectible" + i, 5, 2, 60, this._scene, false);
+                                break;
+                            case 2:
+                                collectible = BABYLON.Mesh.CreateTorusKnot("collectible" + i, 2, 1, 80, 30, 3, 4, this._scene, false);
+                                break;
+                        }
+                        collectible.position = intersex.pickedPoint.clone();
+                        collectible.position.y += randomizer.Random() * 15 + 10;
+                        var axis = new BABYLON.Vector3(Math.random(), Math.random(), Math.random());
+                        axis.normalize();
+                        collectible.rotate(axis, Math.random() * Math.PI, 0 /* LOCAL */);
+                        collectible.material = this._weirdShaderMat;
+                        this.collectibles.push(collectible);
+                        i++;
+                    }
                 }
+                this._scene.registerBeforeRender(function () {
+                    _this.collectibles.forEach(function (e) { return e.rotate(BABYLON.Axis.Z, 0.02, 0 /* LOCAL */); });
+                });
             };
             GameScene.prototype.BuildSceneAround = function (scene) {
                 this.addLightsAndCamera();
@@ -718,7 +777,7 @@ var GAME;
                 this.generateLandscape();
                 this.putStartAndEnd();
                 this.CreatePlayer(this._character);
-                this.DropCollectibles();
+                this.dropCollectibles();
                 return scene;
             };
             return GameScene;
@@ -732,7 +791,7 @@ var GAME;
     var GameWorld = (function () {
         function GameWorld(canvasId, parameters, socket, fullify) {
             this._scenes = {};
-            this.random = new MersenneTwister(111);
+            this._lastPositionUpdate = 0;
             this.parameters = {
                 sceneId: 2 /* GAME */,
                 gameParameters: {
@@ -757,11 +816,10 @@ var GAME;
                     eqFactor: 1
                 }
             };
-            this._lastPositionUpdate = 0;
             BABYLON.Engine.ShadersRepository = "/scripts/Shaders/";
             this._socket = socket;
-            this._canvas = Cast(document.getElementById(canvasId));
-            this._engine = new BABYLON.Engine(this._canvas);
+            this.canvas = Cast(document.getElementById(canvasId));
+            this.engine = new BABYLON.Engine(this.canvas);
             if (fullify) {
                 this.extendCanvas(2 /* HARD */);
             }
@@ -779,7 +837,7 @@ var GAME;
             var _this = this;
             var deferred = new UTILS.Chainable();
             properties = UTILS.Mixin(properties, this.parameters, false);
-            this._engine.displayLoadingUI("Generating map, please wait...").then(function () {
+            this.engine.displayLoadingUI("Generating map, please wait...").then(function () {
                 _this.applyParameters(properties);
                 _this.loadScene(properties.sceneId);
                 if (_this.parameters.gameParameters.isHost) {
@@ -790,18 +848,21 @@ var GAME;
                 else {
                     _this.emit("mapLoaded", { timestamp: Date.now() });
                 }
-                _this._engine.hideLoadingUI().then(function () {
+                _this.engine.hideLoadingUI().then(function () {
                     deferred.call();
                 });
                 if (properties.sceneId == 2 /* GAME */) {
                     var gameScene = Cast(_this._scenes["GAME"]);
                     _this.hookKeyboardTo(gameScene.player.Controller);
                     _this.player = gameScene.player;
+                    _this.collectibles = gameScene.collectibles;
                 }
                 else if (properties.sceneId == 5 /* EXPLORE */) {
                     var exploreScene = Cast(_this._scenes["EXPLORE"]);
                     _this.hookKeyboardTo(exploreScene.player.Controller);
                     _this.player = exploreScene.player;
+                    _this.collectibles = exploreScene.collectibles;
+                    _this.player.setEnabled(true);
                 }
             });
             return deferred;
@@ -854,7 +915,11 @@ var GAME;
                     character: _this.parameters.gameParameters.character
                 });
                 window.postMessage({
-                    playerInfo: { name: _this.parameters.gameParameters.name, playerType: "player" }
+                    playerInfo: {
+                        name: _this.parameters.gameParameters.name,
+                        playerType: "player",
+                        character: _this.parameters.gameParameters.character
+                    }
                 }, window.location.href);
             });
             socket.on("playerJoined", function (playerInfo) {
@@ -863,11 +928,15 @@ var GAME;
                 _this.hookSocketTo(enemy.Controller);
                 _this.enemy = enemy;
                 window.postMessage({
-                    playerInfo: { name: playerInfo.name, playerType: "enemy" }
+                    playerInfo: {
+                        name: playerInfo.name,
+                        playerType: "enemy",
+                        character: playerInfo.character
+                    }
                 }, window.location.href);
             });
             socket.on("enemyPositionUpdate", function (positionInfo) {
-                _this.enemy.pushUpdate(positionInfo);
+                _this.enemy.PushUpdate(positionInfo);
             });
             socket.on("ping", function (x) {
                 socket.emit("pong", x);
@@ -878,18 +947,65 @@ var GAME;
             socket.on("startGame", function (x) {
                 var timeout = x.timeout;
                 setTimeout(function () {
-                    _this.Start();
+                    _this.start();
                 }, timeout);
-                setTimeout(function () {
-                    _this.countdown(timeout);
-                }, 0);
                 _this.StartRenderLoop();
+            });
+            socket.on("collectibleCollected", function (x) {
+                var c = Cast(_this.scene.getMeshByName(x.collectibleName));
+                if (!c)
+                    return;
+                else {
+                    _this.scene.meshes.splice(_this.scene.meshes.indexOf(c), 1);
+                    _this.collectibles.splice(_this.collectibles.indexOf(c), 1);
+                    c.isVisible = false;
+                }
+            });
+            socket.on("gameOver", function (x) {
+                _this.stopGame(true, true);
+            });
+            socket.on("playerDied", function (x) {
+                if (_this.parameters.gameParameters.name == x.playerName) {
+                    _this.player.setEnabled(false);
+                }
+                else {
+                    _this.enemy.setEnabled(false);
+                }
             });
         };
         GameWorld.prototype.StartRenderLoop = function () {
             var _this = this;
-            this._scene.registerBeforeRender(function () {
-                if (!_this.player || !_this._socket)
+            this.scene.registerBeforeRender(function () {
+                if (!_this.player)
+                    return;
+                if (_this.player.IsEnabled && _this.player.parent.position.y < -50) {
+                    _this.emit("playerDied", { playerName: _this.parameters.gameParameters.name, timestamp: Date.now() });
+                    var gameScene = Cast(_this._scenes["GAME"]);
+                    if (gameScene.enemy.IsEnabled) {
+                        _this.stopGame(true, false);
+                        window.postMessage({
+                            playerDied: true
+                        }, window.location.href);
+                        gameScene.mainCamera.target = gameScene.enemy.parent;
+                    }
+                    else {
+                        _this.stopGame(true, true);
+                    }
+                }
+                for (var i = 0; i < _this.collectibles.length; i++) {
+                    var c = _this.collectibles[i];
+                    var distance = _this.player.parent.position.subtract(c.position).length();
+                    if (distance < 7) {
+                        _this.scene.meshes.splice(_this.scene.meshes.indexOf(c), 1);
+                        _this.collectibles.splice(i--, 1);
+                        c.isVisible = false;
+                        _this.emit("collectibleCollected", { collectibleName: c.name, timestamp: Date.now() });
+                    }
+                    else if (distance < 15) {
+                        c.position = BABYLON.Vector3.Lerp(c.position, _this.player.parent.position, 0.5);
+                    }
+                }
+                if (!_this._socket)
                     return;
                 var now = Date.now();
                 if (now - _this._lastPositionUpdate > 1000) {
@@ -904,22 +1020,15 @@ var GAME;
             });
             BABYLON.Tools.QueueNewFrame(function () { return _this.renderLoop(); });
         };
-        GameWorld.prototype.Start = function () {
+        GameWorld.prototype.start = function () {
             console.info("Started!");
-            this.player && this.player.SetEnabled(true);
-            this.enemy && this.enemy.SetEnabled(true);
+            this.player && this.player.setEnabled(true);
+            this.enemy && this.enemy.setEnabled(true);
         };
-        GameWorld.prototype.countdown = function (timeoutms) {
-            var _this = this;
-            console.info("Game starts in " + timeoutms / 1000 + "!");
-            window.postMessage({
-                timeoutms: timeoutms
-            }, window.location.href);
-            if (timeoutms >= 0) {
-                setTimeout(function () {
-                    _this.countdown(timeoutms - 1000);
-                }, 1000);
-            }
+        GameWorld.prototype.stopGame = function (stopPlayer, stopEnemy) {
+            console.info("Game over!");
+            this.player && this.player.setEnabled(!stopPlayer);
+            this.enemy && this.enemy.setEnabled(!stopEnemy);
         };
         GameWorld.prototype.applyParameters = function (guiParams) {
             this.buildScenes(guiParams);
@@ -950,18 +1059,18 @@ var GAME;
         };
         GameWorld.prototype.extendCanvas = function (fullify) {
             var _this = this;
-            var parent = this._canvas.parentElement;
+            var parent = this.canvas.parentElement;
             if (fullify == 0 /* NO */)
                 return;
             var resize = function () {
                 if (fullify === 2 /* HARD */) {
-                    _this._canvas.width = _this._canvas.parentElement.clientWidth;
-                    _this._canvas.height = _this._canvas.parentElement.clientHeight;
-                    _this._engine.resize();
+                    _this.canvas.width = _this.canvas.parentElement.clientWidth;
+                    _this.canvas.height = _this.canvas.parentElement.clientHeight;
+                    _this.engine.resize();
                 }
                 else {
-                    _this._canvas.style["width"] = "100%";
-                    _this._canvas.style["height"] = "100%";
+                    _this.canvas.style["width"] = "100%";
+                    _this.canvas.style["height"] = "100%";
                 }
             };
             window.onresize = resize;
@@ -969,11 +1078,11 @@ var GAME;
         };
         GameWorld.prototype.renderLoop = function () {
             var _this = this;
-            this._engine.beginFrame();
-            if (this._scene) {
-                this._scene.render();
+            this.engine.beginFrame();
+            if (this.scene) {
+                this.scene.render();
             }
-            this._engine.endFrame();
+            this.engine.endFrame();
             BABYLON.Tools.QueueNewFrame(function () { return _this.renderLoop(); });
         };
         GameWorld.prototype.loadScene = function (s) {
@@ -981,24 +1090,24 @@ var GAME;
             for (var i = 0; debugItems.length > 0;) {
                 debugItems[i].parentNode.removeChild(debugItems[i]);
             }
-            if (this._scene) {
-                this._scene.dispose();
+            if (this.scene) {
+                this.scene.dispose();
             }
             switch (s) {
                 case 0 /* TEST */:
-                    this._scene = this._scenes["TEST"].BuildScene();
+                    this.scene = this._scenes["TEST"].BuildScene();
                     break;
                 case 2 /* GAME */:
-                    this._scene = this._scenes["GAME"].BuildScene();
+                    this.scene = this._scenes["GAME"].BuildScene();
                     break;
                 case 3 /* ANIMAL */:
-                    this._scene = this._scenes["ANIMAL"].BuildScene();
+                    this.scene = this._scenes["ANIMAL"].BuildScene();
                     break;
                 case 4 /* TERRAINGEN */:
-                    this._scene = this._scenes["TERRAINGEN"].BuildScene();
+                    this.scene = this._scenes["TERRAINGEN"].BuildScene();
                     break;
                 case 5 /* EXPLORE */:
-                    this._scene = this._scenes["EXPLORE"].BuildScene();
+                    this.scene = this._scenes["EXPLORE"].BuildScene();
                     break;
             }
         };
@@ -1028,25 +1137,25 @@ var GAME;
         function Player(scene, ground) {
             this.INTERSECTION_TRESHOLD = 4;
             this.BASE_ACCELERATION = 2;
-            this.BASE_JUMP_POW = 2.8;
+            this.BASE_JUMP_POW = 1.8;
             this.LAND_COOLDOWN = 100;
             this.ROTATION_APPROXIMATOR = 1 / 8;
             this.TIMEFACTOR = 24;
             this.MINVECTOR = new BABYLON.Vector3(-2, -15, -2);
             this.MAXVECTOR = new BABYLON.Vector3(2, 15, 0.7);
             this.GRAVITY = new BABYLON.Vector3(0, -0.15, 0);
-            this.Controller = { "32": 0, "87": 0, "68": 0, "83": 0, "65": 0, "82": 0 };
             this._landTime = 0;
             this._lastRescueTime = 0;
             this._lastJumpTime = 0;
-            this.CurrentRotation = 0;
-            this.IsEnabled = false;
             this._lastUpdateTime = 0;
             this._latency = 0;
             this._lastFrameFactor = 1;
-            this._totalFramesDuration = 1800;
-            this._totalFramesCount = 100;
+            this._totalFramesDuration = 900;
+            this._totalFramesCount = 50;
             this._lastTickTime = Date.now();
+            this.Controller = { "32": 0, "87": 0, "68": 0, "83": 0, "65": 0, "82": 0 };
+            this.CurrentRotation = 0;
+            this.IsEnabled = false;
             this._scene = scene;
             this._ground = ground;
             this._bottomVector = new BABYLON.Vector3(0, -5, 0);
@@ -1055,9 +1164,6 @@ var GAME;
             this.velocity = BABYLON.Vector3.Zero();
             this.isOnGround = false;
         }
-        Player.prototype.SetEnabled = function (value) {
-            this.IsEnabled = value;
-        };
         Player.prototype.Initialize = function (mesh) {
             var _this = this;
             this.mesh = mesh;
@@ -1071,9 +1177,9 @@ var GAME;
             var boundingInfo = this.mesh.getBoundingInfo();
             this.parent.checkCollisions = true;
             this.parent.rotationQuaternion = new BABYLON.Quaternion(0, 0, 0, 1);
-            this._scene.registerBeforeRender(function () { return _this._gameLoop(); });
+            this._scene.registerBeforeRender(function () { return _this.gameLoop(); });
         };
-        Player.prototype.pushUpdate = function (positionData) {
+        Player.prototype.PushUpdate = function (positionData) {
             if (positionData[3] > this._lastUpdateTime) {
                 this._lastUpdateTime = positionData[3];
                 this._latency = positionData[4];
@@ -1086,14 +1192,21 @@ var GAME;
                 this.targetPosition.addInPlace(extrapolationVector);
             }
         };
-        Player.prototype._gameLoop = function () {
+        Player.prototype.setEnabled = function (value) {
+            this.IsEnabled = value;
+            if (this.IsEnabled == false) {
+                this.velocity.scaleInPlace(0);
+                this.isOnGround = false;
+            }
+        };
+        Player.prototype.gameLoop = function () {
             var lastFrameTime = Date.now() - this._lastTickTime;
             this._lastTickTime = Date.now();
             if (lastFrameTime > 1000)
                 return;
             this._totalFramesDuration += lastFrameTime;
             this._totalFramesCount++;
-            if (this._totalFramesCount % 1000 == 0) {
+            if (this._totalFramesCount % 100 == 0) {
                 this._totalFramesCount /= 2;
                 this._totalFramesDuration /= 2;
             }
@@ -1116,7 +1229,7 @@ var GAME;
                     this.velocity.addInPlace(this.GRAVITY.scale(this._lastFrameFactor));
                 }
             }
-            this.EvaluateKeyState(this.Controller);
+            this.evaluateKeyState(this.Controller);
             this.velocity = BABYLON.Vector3.Clamp(this.velocity, this.MINVECTOR, this.MAXVECTOR);
             if (this.velocity.length() > 0.001) {
                 var positionBeforeMove = this.parent.position.clone();
@@ -1140,15 +1253,16 @@ var GAME;
                     this.parent.position.y = 1;
             }
         };
-        Player.prototype.Jump = function (power) {
+        Player.prototype.jump = function (power) {
             if (Date.now() - this._landTime < this.LAND_COOLDOWN)
                 return;
             this.velocity.y = (this.BASE_JUMP_POW * power);
+            this.parent.position.y += this.BASE_JUMP_POW;
             this.startAnimation("JUMP");
             this._lastJumpTime = Date.now();
             this.isOnGround = false;
         };
-        Player.prototype.Accelerate = function (force) {
+        Player.prototype.accelerate = function (force) {
             if (force > 0) {
                 this.startAnimation("RUN");
             }
@@ -1157,7 +1271,7 @@ var GAME;
             }
             this.velocity.z -= (force * this.BASE_ACCELERATION * this._lastFrameFactor);
         };
-        Player.prototype.Rescue = function () {
+        Player.prototype.rescue = function () {
             if (Date.now() - this._lastRescueTime < 5000)
                 return;
             var down = BABYLON.Vector3.Up().negate();
@@ -1177,7 +1291,7 @@ var GAME;
                 }
             }
         };
-        Player.prototype.RotateTo = function (rotationDirection) {
+        Player.prototype.rotate = function (rotationDirection) {
             if (this.CurrentRotation > Math.PI * 2) {
                 this.CurrentRotation -= Math.PI * 2;
             }
@@ -1188,17 +1302,17 @@ var GAME;
             this.parent.rotate(BABYLON.Axis.Y, actualRotationDelta, 0 /* LOCAL */);
             this.CurrentRotation += actualRotationDelta;
         };
-        Player.prototype.EvaluateKeyState = function (keys) {
+        Player.prototype.evaluateKeyState = function (keys) {
             if (!this.IsEnabled)
                 return;
             if (keys[32] > 0) {
                 if (this.isOnGround) {
-                    this.Jump(1);
+                    this.jump(1);
                     delete keys[32];
                 }
                 else if (Date.now() - this._landTime > 3000) {
                     this._landTime = Date.now();
-                    this.Jump(1.5);
+                    this.jump(1.5);
                     delete keys[32];
                 }
             }
@@ -1218,40 +1332,40 @@ var GAME;
                         this.startAnimation("STAY");
                         break;
                     case 21:
-                        this.Accelerate(0);
-                        this.RotateTo(-1);
+                        this.accelerate(0);
+                        this.rotate(-1);
                         break;
                     case 22:
-                        this.Accelerate(0.707106781);
-                        this.RotateTo(-0.5);
+                        this.accelerate(0.707106781);
+                        this.rotate(-0.5);
                         break;
                     case 12:
-                        this.Accelerate(1);
-                        this.RotateTo(0);
+                        this.accelerate(1);
+                        this.rotate(0);
                         break;
                     case 2:
-                        this.Accelerate(0.707106781);
-                        this.RotateTo(0.5);
+                        this.accelerate(0.707106781);
+                        this.rotate(0.5);
                         break;
                     case 1:
-                        this.Accelerate(0);
-                        this.RotateTo(1);
+                        this.accelerate(0);
+                        this.rotate(1);
                         break;
                     case 0:
-                        this.Accelerate(-0.3535533905);
-                        this.RotateTo(0.5);
+                        this.accelerate(-0.3535533905);
+                        this.rotate(0.5);
                         break;
                     case 10:
-                        this.Accelerate(-0.5);
+                        this.accelerate(-0.5);
                         break;
                     case 20:
-                        this.Accelerate(-0.3535533905);
-                        this.RotateTo(-0.5);
+                        this.accelerate(-0.3535533905);
+                        this.rotate(-0.5);
                         break;
                 }
             }
             if (keys[82]) {
-                this.Rescue();
+                this.rescue();
                 delete keys[82];
             }
         };
@@ -1287,24 +1401,21 @@ var GAME;
             }
             AnimalScene.prototype.BuildSceneAround = function (scene) {
                 scene.disablePhysicsEngine();
-                this._gameWorld._lights = [];
                 var light = new BABYLON.PointLight("sun", new BABYLON.Vector3(-1359, 260, -3040), scene);
                 light.intensity = 3;
                 light.diffuse.g = 0.7;
                 light.diffuse.b = 0.7;
-                this._gameWorld._lights.push(light);
                 var antiLight = new BABYLON.PointLight("antiSun", new BABYLON.Vector3(1359, 260, 3040), scene);
                 antiLight.intensity = .5;
                 antiLight.diffuse.g = 0.7;
                 antiLight.diffuse.b = 0.7;
-                this._gameWorld._lights.push(antiLight);
                 var camera = new BABYLON.FreeCamera("Camera", new BABYLON.Vector3(0, 250, 0), scene);
                 camera.ellipsoid = new BABYLON.Vector3(8, 10, 8);
                 camera.checkCollisions = true;
-                if (this._gameWorld._camera)
-                    this._gameWorld._camera.dispose();
-                this._gameWorld._camera = camera;
-                camera.attachControl(this._gameWorld._canvas);
+                if (this._gameWorld.camera)
+                    this._gameWorld.camera.dispose();
+                this._gameWorld.camera = camera;
+                camera.attachControl(this._gameWorld.canvas);
                 camera.maxZ = 10000;
                 camera.speed = 18;
                 var animals = {};
@@ -1386,7 +1497,6 @@ var GAME;
                 _super.call(this, gameWorld);
             }
             ExploreScene.prototype.addLightsAndCamera = function (scene) {
-                this._gameWorld._lights = [];
                 var light = new BABYLON.PointLight("sun", new BABYLON.Vector3(-1359, 260, -3040), scene);
                 light.intensity = 3;
                 light.diffuse.g = 0.7;
@@ -1395,14 +1505,12 @@ var GAME;
                 antiLight.intensity = .5;
                 antiLight.diffuse.g = 0.7;
                 antiLight.diffuse.b = 0.7;
-                this._gameWorld._lights.push(antiLight);
-                this._gameWorld._lights.push(light);
                 var camera = new BABYLON.FreeCamera("Camera", new BABYLON.Vector3(0, 250, 0), scene);
                 camera.ellipsoid = new BABYLON.Vector3(8, 10, 8);
-                if (this._gameWorld._camera)
-                    this._gameWorld._camera.dispose();
-                this._gameWorld._camera = camera;
-                camera.attachControl(this._gameWorld._canvas);
+                if (this._gameWorld.camera)
+                    this._gameWorld.camera.dispose();
+                this._gameWorld.camera = camera;
+                camera.attachControl(this._gameWorld.canvas);
                 camera.maxZ = 10000;
                 camera.speed = 8;
             };
@@ -1563,8 +1671,9 @@ var GAME;
                     }
                 }
                 scene.registerBeforeRender(function () {
-                    collectibles.forEach(function (e) { return e.rotate(BABYLON.Axis.Y, 0.02, 0 /* LOCAL */); });
+                    collectibles.forEach(function (e) { return e.rotate(BABYLON.Axis.Z, 0.02, 0 /* LOCAL */); });
                 });
+                this.collectibles = collectibles;
                 return scene;
             };
             return ExploreScene;
@@ -1585,7 +1694,6 @@ var GAME;
                 _super.call(this, gameWorld);
             }
             TerrainGenScene.prototype.BuildSceneAround = function (scene) {
-                this._gameWorld._lights = [];
                 var light = new BABYLON.PointLight("sun", new BABYLON.Vector3(-1359, 260, -3040), scene);
                 light.intensity = 3;
                 light.diffuse.g = 0.7;
@@ -1594,15 +1702,13 @@ var GAME;
                 antiLight.intensity = .5;
                 antiLight.diffuse.g = 0.7;
                 antiLight.diffuse.b = 0.7;
-                this._gameWorld._lights.push(antiLight);
-                this._gameWorld._lights.push(light);
                 var camera = new BABYLON.FreeCamera("Camera", new BABYLON.Vector3(0, 250, 0), scene);
                 camera.ellipsoid = new BABYLON.Vector3(8, 10, 8);
                 camera.checkCollisions = true;
-                if (this._gameWorld._camera)
-                    this._gameWorld._camera.dispose();
-                this._gameWorld._camera = camera;
-                camera.attachControl(this._gameWorld._canvas);
+                if (this._gameWorld.camera)
+                    this._gameWorld.camera.dispose();
+                this._gameWorld.camera = camera;
+                camera.attachControl(this._gameWorld.canvas);
                 camera.maxZ = 10000;
                 camera.speed = 8;
                 var skybox = BABYLON.Mesh.CreateBox("skyBox", 5000.0, scene);

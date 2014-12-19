@@ -3,18 +3,22 @@ var GS;
 (function (GS) {
     var Player = (function () {
         function Player(playerInfo, socket) {
+            this.points = 0;
             this.latency = 0;
             this._socket = socket;
             this.isReady = false;
             this.mapReady = false;
+            this.isDead = false;
             this.name = playerInfo.name;
             this.character = playerInfo.character;
             this.pos = [];
+            this.collectibles = [];
         }
         Player.prototype.getPlayerInfo = function () {
             return {
                 character: this.character,
-                name: this.name
+                name: this.name,
+                points: this.points
             };
         };
         Player.prototype.getPositionInfo = function () {
@@ -142,6 +146,31 @@ var GS;
                         var latency = Date.now() - x;
                         player.latency = latency;
                     });
+                    socket.on("collectibleCollected", function (x) {
+                        player.collectibles.push(x.name);
+                        player.points += (x.collectibleName == "endOrb") ? 5 : 1;
+                        nsp.emit("pointUpdate", {
+                            name: player.name,
+                            points: player.points
+                        });
+                        player._enemyRef._socket.emit("collectibleCollected", x);
+                        if (x.collectibleName == "endOrb") {
+                            fireGameOver();
+                        }
+                    });
+                    socket.on("playerDied", function (x) {
+                        if (player._enemyRef.isDead) {
+                            fireGameOver();
+                        }
+                        else {
+                            nsp.emit("playerDied", x);
+                            player.isDead = true;
+                        }
+                    });
+                    var fireGameOver = function () {
+                        var winner = room.players.sort(function (a, b) { return b.points - a.points; })[0].name;
+                        nsp.emit("gameOver", { winner: winner });
+                    };
                     var intervalId = setInterval(function () {
                         socket.emit("ping", Date.now());
                     }, 2000);

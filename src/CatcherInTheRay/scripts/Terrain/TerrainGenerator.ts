@@ -14,6 +14,7 @@
         private _minHeight: number;
         private _gradientBase: number = 0;
         private _gradient: ImageData;
+
         public Parameters: TerrainGeneratorParams;
 
         constructor(params: TerrainGeneratorParams) {
